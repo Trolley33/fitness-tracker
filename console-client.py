@@ -21,6 +21,8 @@ def handler(s, a):
             if ready[0]:
                 reply = s.recv(1024)
                 reply = reply.decode()
+                if not reply:
+                    break
                 print('received', reply)
             if not output_queue.empty():
                 msg = output_queue.get()
