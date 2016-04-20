@@ -4,21 +4,25 @@ import threading
 import queue
 import select
 import sqlite3
+import time
 
 
 def db_handler(db_name):
-    with sqlite3.connect(db_name) as db:
-        while 1:
-            try:
-                if not db_in.empty():
-                    cursor = db.cursor()
-                    x = cursor.execute(db_in.get())
-                    if x:
-                        db_out.put(list(x))
-            except Exception as e:
-                print(e)
-                break
-            db.commit()
+    db = sqlite3.connect(db_name)
+    while 1:
+        try:
+            if not db_in.empty():
+                y = db_in.get()
+                x = db.execute(y).fetchall()
+                db.commit()
+                if x:
+                    db_out.put(x)
+                else:
+                    db_out.put("")
+        except Exception as e:
+            print(e)
+            break
+    db.close()
 
 db_in = queue.Queue()
 db_out = queue.Queue()
@@ -47,7 +51,7 @@ def handler(c, a):
                 reply = reply.decode()
                 if not reply:
                     break
-                print('received', reply)
+                print('* received:', reply)
                 split = reply.split("|")
                 # load|who|username|activities|timespan
                 msg = ''
@@ -59,57 +63,48 @@ def handler(c, a):
                                    WHERE (friends.friend_id = {0} AND friends.id = {1})
                                    OR (friends.friend_id = {1} AND friends.id = {0})""".format(user_id, friend_id)
                         db_in.put(query)
-                        result = db_out.get(True, 2)
+                        result = db_out.get(True, 10)
                     else:
                         result = True
                     if result:
-                        time1 = 'now'
-                        time2 = 7
-                        activities = ()
-                        flag = ""
-                        if len(split) >= 5:
-                            time2 = split[4]
-                        if len(split) == 6:
-                            time1 = str(split[5]) + " day"
+                        max = 6
                         if len(split) >= 4:
-                            activities = split[3]
-                        if not activities:
-                            flag = "NOT"
+                            max = int(split[3])
                         query = ("""SELECT login.username, feed.activity, feed.metadata, feed.date, feed.text
                                     FROM login
                                     JOIN feed
                                     ON login.id=feed.id
-                                    WHERE date(feed.date) >= date('{}', '-{} day')
-                                    AND feed.activity {} IN {}
-                                    AND login.id={}
-                                    ORDER BY feed.date DESC""".format(time1, time2, flag, str(activities), friend_id))
+                                    WHERE login.id={2}
+                                    ORDER BY feed.date DESC
+                                    LIMIT {0},{1}""".format(max-5, max, friend_id))
                         db_in.put(query)
-                        result = db_out.get(True, 2)
+                        result = db_out.get(True, 10)
                         if result:
                             msg = str(result)
+                        else:
+                            msg = "[]"
                     else:
                         print("not friends youth")
                 if split[0] == "feed" and len(split) >= 2:
                     user_id = split[1]
-                    time1 = 'now'
-                    time2 = 7
+                    max = 6
                     if len(split) >= 3:
-                        time2 = split[2]
-                    if len(split) == 4:
-                        time1 = str(split[3]) + " day"
+                        max = int(split[2])
                     query = """SELECT login.username, feed.activity, feed.metadata, feed.date, feed.text, login.id
                                FROM login
                                JOIN feed
                                ON login.id=feed.id
                                JOIN friends
-                               ON feed.id=friends.friend_id OR feed.id = friends.id
-                               WHERE date(feed.date) >= date('{}', '-{} day')
-                               AND friends.id = {}
-                               ORDER BY feed.date DESC""".format(time1, time2, user_id)
+                               ON feed.id=friends.friend_id OR feed.id=friends.id
+                               WHERE friends.id = {2} OR friends.friend_id = {2}
+                               ORDER BY feed.date DESC
+                               LIMIT {0},{1}""".format(max-5, max, user_id)
                     db_in.put(query)
-                    result = db_out.get(True, 2)
+                    result = db_out.get(True, 10)
                     if result:
                         msg = str(result)
+                    else:
+                        msg = "[]"
                 if split[0] == "request" and len(split) == 3:
                     what = split[1]
                     if what == "salt":
@@ -118,7 +113,7 @@ def handler(c, a):
                                     FROM login
                                     WHERE login.username='{}'""".format(name))
                         db_in.put(query)
-                        result = db_out.get(True, 2)
+                        result = db_out.get(True, 10)
                         if result:
                             salt = result[0][0]
                             msg = salt
@@ -131,7 +126,7 @@ def handler(c, a):
                                 FROM login
                                 WHERE login.username='{}'""".format(name))
                     db_in.put(query)
-                    result = db_out.get(True, 2)
+                    result = db_out.get(True, 10)
                     if result:
                         pass_hash = result[0][0]
                         if pass_hash == sub_passw:
@@ -140,9 +135,37 @@ def handler(c, a):
                             msg = "false"
                     else:
                         msg = "false"
+                if split[0] == "signup" and len(split) == 4:
+                    name = split[1]
+                    hash = split[2]
+                    salt = split[3]
+                    query = """SELECT login.id
+                               FROM login
+                               WHERE login.username='{}'""".format(name)
+                    db_in.put(query)
+                    result = db_out.get(True, 10)
+                    if result:
+                        print("already exists")
+                        msg = "false"
+                    else:
+                        query = """INSERT INTO login (username, pass, salt)
+                                   VALUES ('{}', '{}', '{}')""".format(name, hash, salt)
+                        db_in.put(query)
+                        db_out.get()
+                        msg = "true"
+                if split[0] == "new" and len(split) == 5:
+                    id = split[1].replace("'", "\\'")
+                    act = split[2].replace("'", "\\'")
+                    meta = split[3].replace("'", "\\'").replace('\n', '')
+                    text = split[4].replace("'", "\\'").replace('\n', '')
+                    query = """INSERT INTO feed
+                               VALUES ('{}', '{}', '{}', datetime('now'), '{}')""".format(id, act, text, meta)
 
+                    db_in.put(query)
+                    db_out.get(True, 10)
+                    print("added")
                 if msg:
-                    print("sending:", msg)
+                    print("* sending:", msg)
                     c.send(msg.encode())
 
         except Exception as e:
