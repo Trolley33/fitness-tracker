@@ -395,6 +395,9 @@ class Main:
         self.clear_posts()
         self.page_frame.grid_forget()
 
+        self.back_but.grid_forget()
+        self.next_but.grid_forget()
+
     def clear_posts(self):
         for post in self.posts:
             if isinstance(post, Post):

@@ -136,9 +136,9 @@ def handler(c, a):
                     else:
                         msg = "false"
                 if split[0] == "signup" and len(split) == 4:
-                    name = split[1]
-                    hash = split[2]
-                    salt = split[3]
+                    name = split[1].replace("'", "''")
+                    hash = split[2].replace("'", "''")
+                    salt = split[3].replace("'", "''")
                     query = """SELECT login.id
                                FROM login
                                WHERE login.username='{}'""".format(name)
@@ -152,14 +152,21 @@ def handler(c, a):
                                    VALUES ('{}', '{}', '{}')""".format(name, hash, salt)
                         db_in.put(query)
                         db_out.get()
+                        query = "SELECT id FROM login WHERE username='{}'".format(name)
+                        db_in.put(query)
+                        result = db_out.get()
+                        query = "INSERT INTO friends VALUES ('{0}', '{0}', datetime('now', 'localtime'))".format(result[0][0])
+                        db_in.put(query)
+                        db_out.get()
                         msg = "true"
+
                 if split[0] == "new" and len(split) == 5:
                     id = split[1].replace("'", "\\'")
                     act = split[2].replace("'", "\\'")
                     meta = split[3].replace("'", "\\'").replace('\n', '')
                     text = split[4].replace("'", "\\'").replace('\n', '')
                     query = """INSERT INTO feed
-                               VALUES ('{}', '{}', '{}', datetime('now'), '{}')""".format(id, act, text, meta)
+                               VALUES ('{}', '{}', '{}', datetime('now', 'localtime'), '{}')""".format(id, act, text, meta)
 
                     db_in.put(query)
                     db_out.get(True, 10)
