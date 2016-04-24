@@ -155,22 +155,59 @@ def handler(c, a):
                         query = "SELECT id FROM login WHERE username='{}'".format(name)
                         db_in.put(query)
                         result = db_out.get()
-                        query = "INSERT INTO friends VALUES ('{0}', '{0}', datetime('now', 'localtime'))".format(result[0][0])
+                        query = "INSERT INTO friends VALUES ('{0}', '{0}', " \
+                                "datetime('now', 'localtime'))".format(result[0][0])
                         db_in.put(query)
                         db_out.get()
                         msg = "true"
 
                 if split[0] == "new" and len(split) == 5:
-                    id = split[1].replace("'", "\\'")
-                    act = split[2].replace("'", "\\'")
-                    meta = split[3].replace("'", "\\'").replace('\n', '')
-                    text = split[4].replace("'", "\\'").replace('\n', '')
+                    id = split[1].replace("'", "''")
+                    act = split[2].replace("'", "''")
+                    meta = split[3].replace("'", "''").replace('\n', '')
+                    text = split[4].replace("'", "''").replace('\n', '')
                     query = """INSERT INTO feed
-                               VALUES ('{}', '{}', '{}', datetime('now', 'localtime'), '{}')""".format(id, act, text, meta)
+                               VALUES ('{}', '{}', '{}', datetime('now', 'localtime'), '{}')""".format(id, act, text,
+                                                                                                       meta)
 
                     db_in.put(query)
                     db_out.get(True, 10)
                     print("added")
+                if split[0] == "search" and len(split) == 3:
+                    id = split[1].replace("'", "''")
+                    name = split[2].replace("'", "''")
+                    query = """SELECT login.id, username FROM login
+                               JOIN friends
+                               ON (login.id=friends.id AND friends.friend_id='{1}')
+                               OR (login.id=friends.friend_id AND friends.id='{1}')
+                               OR (friends.friend_id='{1}' AND friends.id='{1}')
+                               WHERE username LIKE '%{0}%'
+                               LIMIT 15""".format(name, id)
+                    db_in.put(query)
+                    friends = db_out.get(True, 10)
+                    query = """SELECT login.id, username FROM login
+                               WHERE username LIKE '%{0}%'
+                               LIMIT 15""".format(name, id)
+                    db_in.put(query)
+                    not_friends = db_out.get(True, 10)
+
+                    not_friends = [x for x in not_friends if x not in friends]
+
+                    print(friends, not_friends)
+
+                    if friends or not_friends:
+                        msg = str([set(friends), set(not_friends)][:15])
+                    else:
+                        msg = "[[], []]"
+
+                if split[0] == "friends" and len(split) == 3:
+                    id1 = split[1].replace("'", "''")
+                    id2 = split[2].replace("'", "''")
+
+                    query = "INSERT INTO friends VALUES ('{}', '{}', datetime('now'))".format(id1, id2)
+                    db_in.put(query)
+                    db_out.get()
+
                 if msg:
                     print("* sending:", msg)
                     c.send(msg.encode())

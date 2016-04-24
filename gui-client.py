@@ -114,6 +114,92 @@ class PostDialog:
             App.popup("warning", "Drop-down and amount done do not match up.")
 
 
+class SearchDialog:
+    def __init__(self, container):
+        self.container = container
+
+        self.top = tk.Toplevel(self.container.app.root)
+
+        self.search_bar = tk.Entry(self.top)
+        self.search_but = tk.Button(self.top, text="Search",  command=self.search)
+
+        self.results = []
+        self.results_stuff = []
+
+        self.draw()
+
+    def draw(self):
+        self.search_bar.grid(column=0, row=0, sticky="NESW")
+        self.search_but.grid(column=1, row=0, sticky="W")
+
+    def search(self):
+        term = self.search_bar.get()
+        self.clear()
+        if term:
+            self.container.app.out_queue.put("search|{}|{}".format(self.container.app.id, term))
+            try:
+                self.results = eval(self.container.app.in_queue.get(True, 4))
+            except queue.Empty:
+                App.popup("warning", "No response from server, are you connected to the internet?")
+            q = 1
+            for i, friend in enumerate(self.results[0]):
+                self.results_stuff.append(SearchFrame(self, i+1, friend[1], friend[0], 1))
+                self.results_stuff[-1].draw()
+                q += 1
+            for i, user in enumerate(self.results[1]):
+                self.results_stuff.append(SearchFrame(self, q+i+1, user[1], user[0], 0))
+                self.results_stuff[-1].draw()
+            print([x.username for x in self.results_stuff])
+
+    def clear(self):
+        for p in self.results_stuff:
+            p.destroy()
+
+
+class SearchFrame:
+    def __init__(self, container, row, username, id, is_friend):
+        self.container = container
+
+        self.row = row
+        self.username = username
+        self.id = id
+        self.is_friend = is_friend
+
+        if is_friend:
+            cmd = lambda: self.container.container.load(self.id)
+            text = "View profile"
+        else:
+            cmd = lambda: self.container.container.app.out_queue.put("friends|{}|{}"
+                                                                     .format(self.container.container.app.id, self.id))
+            text = "Add friend"
+
+        self.frame = tk.Frame(self.container.top)
+        self.frame.columnconfigure(0, minsize=100)
+        self.frame.columnconfigure(1, minsize=100)
+
+        self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
+                                 font=("trebuchet ms", 12, "bold"))
+
+        self.profile_button = tk.Button(self.frame, text=text, bd=0, fg="royalblue3", bg="white",
+                                        font=("trebuchet ms", 12, "bold"),
+                                        command=cmd)
+
+    def draw(self):
+        self.frame.grid(column=0, row=self.row, pady=(5, 5), sticky="WE", columnspan=2)
+
+        self.user_lab.grid(column=0, row=0, sticky="W", padx=5)
+
+        self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
+
+    def destroy(self):
+        self.frame.destroy()
+
+        self.user_lab.destroy()
+        self.profile_button.destroy()
+
+        del self
+
+
 class App:
     def __init__(self):
         self.root = tk.Tk()
@@ -290,6 +376,9 @@ class Main:
         self.post_but = tk.Button(self.top_bar, text="Post Something", bg="royalblue2", fg="white", bd=0, width=14,
                                   command=self.post, font=("trebuchet ms", 12))
 
+        self.friend_but = tk.Button(self.top_bar, text="Search", bg="royalblue2", fg="white", bd=0,
+                                    width=8, command=self.search, font=("trebuchet ms", 12))
+
         self.logout_but = tk.Button(self.top_bar, text="Log Out", bg="royalblue2", fg="white", bd=0, width=7,
                                     command=self.logout, font=("trebuchet ms", 12))
 
@@ -303,7 +392,10 @@ class Main:
         self.posts = []
 
     def post(self):
-        t = PostDialog(self)
+        PostDialog(self)
+
+    def search(self):
+        SearchDialog(self)
 
     def back(self):
         if self.page > 1:
@@ -317,7 +409,7 @@ class Main:
 
     def submit(self, activity, meta, text):
         self.app.out_queue.put("new|{}|{}|{}|{}".format(self.app.id, activity, meta, text))
-        self.app.root.after(4000, self.load)
+        self.app.root.after(2000, self.load)
 
     def load(self, id=-1):
         self.clear_posts()
@@ -378,9 +470,10 @@ class Main:
         self.app.root.configure(bg="gray90")
         self.top_bar.grid(column=0, row=0, sticky="NEWS", columnspan=2)
 
-        self.user_but.grid(column=0, row=0, sticky="NSW", padx=(0, 120))
+        self.user_but.grid(column=0, row=0, sticky="NSW", padx=(0, 5))
         self.user_but.configure(text=self.app.username)
-        self.post_but.grid(column=50, row=0, sticky="NS", padx=(60, 60))
+        self.post_but.grid(column=3, row=0, sticky="NS", padx=(5, 240))
+        self.friend_but.grid(column=2, row=0, sticky="NS", padx=(5, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(120, 0))
 
         self.page_frame.grid(column=0, row=1, columnspan=2)
