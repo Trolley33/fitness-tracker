@@ -10,7 +10,7 @@ from tkinter import messagebox
 
 # the master server's IP, set as programmer
 global SERVER
-SERVER = ("Trolley", 54321)
+SERVER = ("ICT-F16-002", 54321)
 
 
 class Post:

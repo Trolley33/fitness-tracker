@@ -90,7 +90,7 @@ def handler(c, a):
                     max = 6
                     if len(split) >= 3:
                         max = int(split[2])
-                    query = """SELECT login.username, feed.activity, feed.metadata, feed.date, feed.text, login.id
+                    query = """SELECT DISTINCT login.username, feed.activity, feed.metadata, feed.date, feed.text, login.id
                                FROM login
                                JOIN feed
                                ON login.id=feed.id
@@ -190,8 +190,8 @@ def handler(c, a):
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     not_friends = db_out.get(True, 10)
-
-                    not_friends = [x for x in not_friends if x not in friends]
+                    if len(friends) > 0:
+                        not_friends = [x for x in not_friends if x not in friends]
 
                     print(friends, not_friends)
 
