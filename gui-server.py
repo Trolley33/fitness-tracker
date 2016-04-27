@@ -60,8 +60,9 @@ def handler(c, a):
                     user_id = split[2]
                     if friend_id != user_id:
                         query = """SELECT * FROM friends
-                                   WHERE (friends.friend_id = {0} AND friends.id = {1})
-                                   OR (friends.friend_id = {1} AND friends.id = {0})""".format(user_id, friend_id)
+                                   WHERE ((friends.friend_id = {0} AND friends.id = {1})
+                                   OR (friends.friend_id = {1} AND friends.id = {0}))
+                                   AND friends.state='active'""".format(user_id, friend_id)
                         db_in.put(query)
                         result = db_out.get(True, 10)
                     else:
@@ -96,7 +97,8 @@ def handler(c, a):
                                ON login.id=feed.id
                                JOIN friends
                                ON feed.id=friends.friend_id OR feed.id=friends.id
-                               WHERE friends.id = {2} OR friends.friend_id = {2}
+                               WHERE (friends.id = {2} OR friends.friend_id = {2})
+                               AND friends.state='active'
                                ORDER BY feed.date DESC
                                LIMIT {0},{1}""".format(max-5, max, user_id)
                     db_in.put(query)
@@ -155,7 +157,7 @@ def handler(c, a):
                         query = "SELECT id FROM login WHERE username='{}'".format(name)
                         db_in.put(query)
                         result = db_out.get()
-                        query = "INSERT INTO friends VALUES ('{0}', '{0}', " \
+                        query = "INSERT INTO friends VALUES ('{0}', '{0}', 'active'," \
                                 "datetime('now', 'localtime'))".format(result[0][0])
                         db_in.put(query)
                         db_out.get()
@@ -180,13 +182,13 @@ def handler(c, a):
                                JOIN friends
                                ON (login.id=friends.id AND friends.friend_id='{1}')
                                OR (login.id=friends.friend_id AND friends.id='{1}')
-                               OR (friends.friend_id='{1}' AND friends.id='{1}')
                                WHERE username LIKE '%{0}%'
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     friends = db_out.get(True, 10)
                     query = """SELECT login.id, username FROM login
                                WHERE username LIKE '%{0}%'
+                               AND login.id != '{1}'
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     not_friends = db_out.get(True, 10)
@@ -204,9 +206,48 @@ def handler(c, a):
                     id1 = split[1].replace("'", "''")
                     id2 = split[2].replace("'", "''")
 
-                    query = "INSERT INTO friends VALUES ('{}', '{}', datetime('now'))".format(id1, id2)
+                    query = "INSERT INTO friends VALUES ('{}', '{}', 'waiting', datetime('now'))".format(id1, id2)
                     db_in.put(query)
                     db_out.get()
+
+                if split[0] == "pending" and len(split) == 2:
+                    id = split[1]
+                    query = """SELECT DISTINCT username, login.id  FROM login
+                               JOIN friends
+                               ON (login.id=friends.id AND friends.friend_id='{0}')
+                               OR (login.id=friends.friend_id AND friends.id='{0}')
+                               WHERE friends.state = 'waiting'
+                               LIMIT 15""".format(id)
+                    db_in.put(query)
+                    friends = db_out.get(True, 10)
+                    if friends:
+                        msg = str(friends)
+                    else:
+                        msg = "[]"
+
+                if split[0] == "current" and len(split) == 2:
+                    id = split[1]
+                    query = """SELECT DISTINCT username, login.id FROM login
+                               JOIN friends
+                               ON (login.id=friends.id AND friends.friend_id='{0}')
+                               OR (login.id=friends.friend_id AND friends.id='{0}')
+                               WHERE friends.state = 'active'
+                               AND login.id != '{0}'
+                               LIMIT 15""".format(id)
+                    db_in.put(query)
+                    friends = db_out.get(True, 10)
+                    if friends:
+                        msg = str(friends)
+                    else:
+                        msg = "[]"
+
+                if split[0] == "accept" and len(split) == 3:
+                    # TODO ACCEPT FRIEND REQUESTS
+                    pass
+
+                if split[0] == "remove" and len(split) == 3:
+                    # TODO REMOVE FRIENDS
+                    pass
 
                 if msg:
                     print("* sending:", msg)
