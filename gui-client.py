@@ -80,18 +80,18 @@ class PostDialog:
         self.selected_opt = tk.StringVar(self.top)
         self.selected_opt.set("Nothing")
         self.options = OrderedDict([["Nothing", ""],
-                                   ["Running", "run"],
-                                   ["Swimming", "swim"],
-                                   ["Weightlifting", "lift"],
-                                   ["Cycling", "cycle"],
-                                   ["Coding", "code"]])
+                                    ["Running", "run"],
+                                    ["Swimming", "swim"],
+                                    ["Weightlifting", "lift"],
+                                    ["Cycling", "cycle"],
+                                    ["Coding", "code"]])
 
         self.act_lab = tk.Label(self.top, text="What did you do today?", font=("trebuchet ms", 12, "bold"),
                                 fg="white", bg="royalblue2")
         self.meta_lab = tk.Label(self.top, text="No activity selected.", font=("trebuchet ms", 12, "bold"),
-                                fg="white", bg="royalblue2")
+                                 fg="white", bg="royalblue2")
         self.text_lab = tk.Label(self.top, text="How was it?", font=("trebuchet ms", 12, "bold"),
-                                fg="white", bg="royalblue2")
+                                 fg="white", bg="royalblue2")
 
         self.menu = tk.OptionMenu(self.top, self.selected_opt, *self.options.keys())
 
@@ -165,7 +165,7 @@ class SearchDialog:
         self.top.title("Search for Friends!")
 
         self.search_bar = tk.Entry(self.top)
-        self.search_but = tk.Button(self.top, text="Search",  command=self.search)
+        self.search_but = tk.Button(self.top, text="Search", command=self.search)
 
         self.results = []
         self.results_stuff = []
@@ -187,11 +187,11 @@ class SearchDialog:
                 App.popup("warning", "No response from server, are you connected to the internet?")
             q = 1
             for i, friend in enumerate(self.results[0]):
-                self.results_stuff.append(SearchFrame(self, i+1, friend[1], friend[0], 1))
+                self.results_stuff.append(SearchFrame(self, i + 1, friend[1], friend[0], 1))
                 self.results_stuff[-1].draw()
                 q += 1
             for i, user in enumerate(self.results[1]):
-                self.results_stuff.append(SearchFrame(self, q+i+1, user[1], user[0], 0))
+                self.results_stuff.append(SearchFrame(self, q + i + 1, user[1], user[0], 0))
                 self.results_stuff[-1].draw()
             print([x.username for x in self.results_stuff])
 
@@ -490,7 +490,7 @@ class Login:
         passw = self.pass_entry.get()
         if name and passw:
             salt = Login.salt_generator()
-            passw_hash = hashlib.sha256(str(passw+salt).encode()).hexdigest()
+            passw_hash = hashlib.sha256(str(passw + salt).encode()).hexdigest()
             self.app.out_queue.put("signup|{}|{}|{}".format(name, passw_hash, salt))
             success = self.app.in_queue.get(True, 10)
             if success == "true":
@@ -503,7 +503,7 @@ class Login:
             try:
                 self.app.out_queue.put("request|salt|{}".format(name))
                 salt = self.app.in_queue.get(True, 5)
-                hash = hashlib.sha256(str(passw+salt).encode()).hexdigest()
+                hash = hashlib.sha256(str(passw + salt).encode()).hexdigest()
                 self.app.out_queue.put("login|{}|{}".format(name, hash))
                 valid = self.app.in_queue.get(True, 5).split("|")
                 if valid[0] == "true":
@@ -548,11 +548,12 @@ class Main:
         self.search_but = tk.Button(self.top_bar, text="Search", bg="royalblue2", fg="white", bd=0,
                                     width=8, command=self.search, font=("trebuchet ms", 12))
 
-        self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2",fg="white", bd=0,
+        self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2", fg="white", bd=0,
                                      width=8, command=self.friends, font=("trebuchet ms", 12))
 
-        self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2",fg="white", bd=0,
-                                     width=3, command=lambda: self.load(self.current_profile), font=("trebuchet ms", 12))
+        self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
+                                     width=3, command=lambda: self.load(self.current_profile),
+                                     font=("trebuchet ms", 12))
 
         self.logout_but = tk.Button(self.top_bar, text="Log Out", bg="royalblue2", fg="white", bd=0, width=7,
                                     command=self.logout, font=("trebuchet ms", 12))
@@ -601,7 +602,7 @@ class Main:
         if id == -1:
             if self.current_profile != -1:
                 self.page = 1
-            self.app.out_queue.put("feed|{}|{}".format(self.app.id, self.page*5))
+            self.app.out_queue.put("feed|{}|{}".format(self.app.id, self.page * 5))
             self.current_profile = -1
             feed = self.app.in_queue.get(True, 2)
             feed = eval(feed)
@@ -623,7 +624,7 @@ class Main:
             # query server for profile
             if self.current_profile != id:
                 self.page = 1
-            self.app.out_queue.put("profile|{}|{}|{}".format(id, self.app.id, self.page*5))
+            self.app.out_queue.put("profile|{}|{}|{}".format(id, self.app.id, self.page * 5))
             self.current_profile = id
             prof = self.app.in_queue.get(True, 2)
             prof = eval(prof)
@@ -690,5 +691,6 @@ class Main:
             else:
                 post.destroy()
         self.posts = []
+
 
 main = App()
