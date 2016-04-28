@@ -1,10 +1,8 @@
-import hashlib
-import socket
-import threading
 import queue
 import select
+import socket
 import sqlite3
-import time
+import threading
 
 
 def db_handler(db_name):
@@ -120,7 +118,7 @@ def handler(c, a):
                             salt = result[0][0]
                             msg = salt
                         else:
-                            msg = "impossible salt"
+                            msg = "no user"
                 if split[0] == "login" and len(split) == 3:
                     name = split[1]
                     sub_passw = split[2]
@@ -214,9 +212,9 @@ def handler(c, a):
                     id = split[1]
                     query = """SELECT DISTINCT username, login.id  FROM login
                                JOIN friends
-                               ON (login.id=friends.id AND friends.friend_id='{0}')
-                               OR (login.id=friends.friend_id AND friends.id='{0}')
+                               ON (login.id=friends.id)
                                WHERE friends.state = 'waiting'
+                               AND friends.friend_id = '{0}'
                                LIMIT 15""".format(id)
                     db_in.put(query)
                     friends = db_out.get(True, 10)
@@ -242,12 +240,29 @@ def handler(c, a):
                         msg = "[]"
 
                 if split[0] == "accept" and len(split) == 3:
-                    # TODO ACCEPT FRIEND REQUESTS
-                    pass
+                    id1 = split[1]
+                    id2 = split[2]
+
+                    query = """UPDATE friends
+                               SET state='active'
+                               WHERE friends.id = '{0}'
+                               AND friends.friend_id = '{1}'""".format(id1, id2)
+
+                    db_in.put(query)
+                    db_out.get()
 
                 if split[0] == "remove" and len(split) == 3:
-                    # TODO REMOVE FRIENDS
-                    pass
+                    id1 = split[1]
+                    id2 = split[2]
+
+                    query = """DELETE FROM friends
+                               WHERE (friends.id = '{0}'
+                               AND friends.friend_id = '{1}')
+                               OR (friends.id = '{1}'
+                               AND friends.friend_id = '{0}')""".format(id1, id2)
+
+                    db_in.put(query)
+                    db_out.get()
 
                 if msg:
                     print("* sending:", msg)

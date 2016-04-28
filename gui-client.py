@@ -1,11 +1,12 @@
-import select
-import queue
-import socket
-import random
-import threading
 import hashlib
+import queue
+import random
+import select
+import socket
 import string
+import threading
 import tkinter as tk
+from collections import OrderedDict
 from tkinter import messagebox
 
 # the master server's IP, set as programmer
@@ -71,31 +72,50 @@ class PostDialog:
         self.container = container
 
         self.top = tk.Toplevel(self.container.app.root)
+        self.top.title("Share Your Experiences!")
+        self.top.geometry("640x208")
+        self.top.configure(bg="royalblue2")
+        self.top.columnconfigure(0, minsize=320)
+
         self.selected_opt = tk.StringVar(self.top)
         self.selected_opt.set("Nothing")
-        self.options = {"Nothing": "",
-                        "Running": "run",
-                        "Swimming": "swim",
-                        "Weightlifting": "lift"}
+        self.options = OrderedDict([["Nothing", ""],
+                                   ["Running", "run"],
+                                   ["Swimming", "swim"],
+                                   ["Weightlifting", "lift"],
+                                   ["Cycling", "cycle"],
+                                   ["Coding", "code"]])
 
-        self.act_lab = tk.Label(self.top, text="What did you do today?", font=("trebuchet ms", 12, "bold"))
-        self.meta_lab = tk.Label(self.top, text="How much did you do?", font=("trebuchet ms", 12, "bold"))
-        self.text_lab = tk.Label(self.top, text="How was it?", font=("trebuchet ms", 12, "bold"))
+        self.act_lab = tk.Label(self.top, text="What did you do today?", font=("trebuchet ms", 12, "bold"),
+                                fg="white", bg="royalblue2")
+        self.meta_lab = tk.Label(self.top, text="No activity selected.", font=("trebuchet ms", 12, "bold"),
+                                fg="white", bg="royalblue2")
+        self.text_lab = tk.Label(self.top, text="How was it?", font=("trebuchet ms", 12, "bold"),
+                                fg="white", bg="royalblue2")
 
-        self.menu = tk.OptionMenu(self.top, self.selected_opt, *sorted(self.options.keys()))
+        self.menu = tk.OptionMenu(self.top, self.selected_opt, *self.options.keys())
+
+        self.menu.configure(bd=0, bg="royalblue2", fg="white", width=10, relief="flat",
+                            activeforeground="white", activebackground="royalblue2")
+        self.menu["menu"].config(bd=0, bg="royalblue2", fg="white",
+                                 activeforeground="white", relief="flat")
+
         self.meta = tk.Entry(self.top, font=("trebuchet ms", 11), width=10)
         self.text = tk.Text(self.top, width=35, height=3, wrap='word', font=("trebuchet ms", 11))
 
+        self.selected_opt.trace('w', self.update_text)
+
         self.scroll_bar = tk.Scrollbar(self.top, command=self.text.yview)
         self.text['yscrollcommand'] = self.scroll_bar.set
-        self.submit_but = tk.Button(self.top, text="Submit", command=self.validate)
+        self.submit_but = tk.Button(self.top, text="Submit", command=self.validate, bg="steelblue2", fg="white",
+                                    bd=0, width=7, font=("trebuchet ms", 12))
 
         self.draw()
 
     def draw(self):
-        self.act_lab.grid(column=0, row=0, pady=(12, 0))
-        self.meta_lab.grid(column=0, row=1, pady=(12, 0))
-        self.text_lab.grid(column=0, row=2, pady=(12, 0))
+        self.act_lab.grid(column=0, row=0, pady=(12, 0), padx=5, sticky="E")
+        self.meta_lab.grid(column=0, row=1, pady=(12, 0), padx=5, sticky="E")
+        self.text_lab.grid(column=0, row=2, pady=(12, 0), padx=5, sticky="E")
 
         self.menu.grid(column=1, row=0, sticky="W")
         self.meta.grid(column=1, row=1, sticky="W")
@@ -103,7 +123,7 @@ class PostDialog:
 
         self.scroll_bar.grid(column=2, row=2, sticky="NEWS")
 
-        self.submit_but.grid(column=1, row=3, columnspan=3, sticky="E", padx=16)
+        self.submit_but.grid(column=1, row=3, columnspan=3, sticky="E", padx=16, pady=(5, 0))
 
     def validate(self):
         activity = self.selected_opt.get()
@@ -117,12 +137,32 @@ class PostDialog:
         else:
             App.popup("warning", "Drop-down and amount done do not match up.")
 
+    def update_text(self, *args):
+        act = self.selected_opt.get()
+        x = ""
+        m = ""
+        if act in self.options.keys():
+            x = self.options[act]
+        if x == "run" or x == "cycle":
+            m = "kilometres"
+        elif x == "swim":
+            m = "metres"
+        elif x == "lift":
+            m = "kilograms"
+        elif x == "code":
+            m = "lines"
+        if x and m:
+            self.meta_lab.configure(text="How many {} did you {}?".format(m, x))
+        else:
+            self.meta_lab.configure(text="No activity selected.")
+
 
 class SearchDialog:
     def __init__(self, container):
         self.container = container
 
         self.top = tk.Toplevel(self.container.app.root)
+        self.top.title("Search for Friends!")
 
         self.search_bar = tk.Entry(self.top)
         self.search_but = tk.Button(self.top, text="Search",  command=self.search)
@@ -210,6 +250,9 @@ class FriendDialog:
         self.container = container
 
         self.top = tk.Toplevel(self.container.app.root, bg="gray90")
+        self.top.title("Add New Friends!")
+        self.top.columnconfigure(0, minsize=240)
+        self.top.columnconfigure(1, minsize=240)
 
         self.title_l = tk.Label(self.top, text="Requests", fg="white", bg="royalblue2",
                                 font=("trebuchet ms", 14, "bold"))
@@ -259,7 +302,12 @@ class FriendDialog:
         for i, p in enumerate(current):
             u = p[0]
             id = p[1]
-            self.pending.append(Friend(self, i, u, id, 1, self.right))
+            self.current.append(Friend(self, i, u, id, 1, self.right))
+        if not self.pending:
+            self.pending.append(Friend(self, 0, "Nothing here!", -1, -1, self.left))
+
+        if not self.current:
+            self.current.append(Friend(self, 0, "Nothing here!", -1, -1, self.right))
 
 
 class Friend:
@@ -271,6 +319,10 @@ class Friend:
         self.id = id
         self.is_friend = is_friend
 
+        self.frame = tk.Frame(frame, bg="white", bd=2, relief="groove")
+        self.frame.columnconfigure(0, minsize=120)
+        self.frame.columnconfigure(1, minsize=120)
+
         if is_friend:
             cmd = self.remove
             text = "Remove Friend"
@@ -278,9 +330,12 @@ class Friend:
             cmd = self.accept
             text = "Accept Request"
 
-        self.frame = tk.Frame(frame, bg="white", bd=2, relief="groove")
-        self.frame.columnconfigure(0, minsize=120)
-        self.frame.columnconfigure(1, minsize=120)
+        self.button_draw = True
+
+        if not id or is_friend == -1:
+            self.button_draw = False
+            self.frame.columnconfigure(0, minsize=0)
+            self.frame.columnconfigure(1, minsize=0)
 
         self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
@@ -293,8 +348,8 @@ class Friend:
         self.frame.grid(column=0, row=self.row, pady=(5, 5), sticky="NSWE", columnspan=2)
 
         self.user_lab.grid(column=0, row=0, sticky="W")
-
-        self.profile_button.grid(column=4, row=0, sticky="E")
+        if self.button_draw:
+            self.profile_button.grid(column=4, row=0, sticky="E")
 
     def remove(self):
         self.container.container.app.out_queue.put("remove|{}|{}".format(self.id, self.container.container.app.id))
@@ -438,7 +493,8 @@ class Login:
             passw_hash = hashlib.sha256(str(passw+salt).encode()).hexdigest()
             self.app.out_queue.put("signup|{}|{}|{}".format(name, passw_hash, salt))
             success = self.app.in_queue.get(True, 10)
-            print(success)
+            if success == "true":
+                App.popup("info", "Successfully signed up.")
 
     def login(self):
         name = self.user_entry.get()
@@ -483,7 +539,7 @@ class Main:
 
         self.top_bar = tk.Frame(bg="royalblue3")
 
-        self.user_but = tk.Button(self.top_bar, text="Oi!", bg="royalblue2", fg="white",
+        self.user_but = tk.Button(self.top_bar, text="Oi!", bg="royalblue2", fg="white", width=6,
                                   font=("trebuchet ms", 12), padx=5, bd=0, command=self.load)
 
         self.post_but = tk.Button(self.top_bar, text="Post Something", bg="royalblue2", fg="white", bd=0, width=14,
@@ -494,6 +550,9 @@ class Main:
 
         self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2",fg="white", bd=0,
                                      width=8, command=self.friends, font=("trebuchet ms", 12))
+
+        self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2",fg="white", bd=0,
+                                     width=3, command=lambda: self.load(self.current_profile), font=("trebuchet ms", 12))
 
         self.logout_but = tk.Button(self.top_bar, text="Log Out", bg="royalblue2", fg="white", bd=0, width=7,
                                     command=self.logout, font=("trebuchet ms", 12))
@@ -535,7 +594,9 @@ class Main:
         options = {
             "run": "Ran {} kilometres.",
             "swim": "Swam {} metres.",
-            "lift": "Lifted {} kilograms."
+            "lift": "Lifted {} kilograms.",
+            "cycle": "Cycled {} kilometres.",
+            "code": "Coded {} lines."
         }
         if id == -1:
             if self.current_profile != -1:
@@ -553,9 +614,11 @@ class Main:
                 id = p[5]
                 if a in options.keys():
                     a = options[a].format(m)
+                else:
+                    a = ""
                 self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=id))
                 self.posts[-1].draw(i)
-            self.user_but.configure(text=self.app.username)
+            self.user_but.configure(text="Profile", command=lambda: self.load(self.app.id))
         else:
             # query server for profile
             if self.current_profile != id:
@@ -572,9 +635,11 @@ class Main:
                 t = p[4]
                 if a in options.keys():
                     a = options[a].format(m)
+                else:
+                    a = ""
                 self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=-1))
                 self.posts[-1].draw(i)
-            self.user_but.configure(text=u)
+            self.user_but.configure(text="Feed", command=self.load)
         if len(self.posts) == 0:
             self.posts.append(tk.Label(self.page_frame, text="No posts here!", fg="gray65", bg="gray95",
                                        font=("trebuchet ms", 12, "bold"), bd=2, relief="groove", padx=40, pady=20))
@@ -592,16 +657,19 @@ class Main:
         self.top_bar.grid(column=0, row=0, sticky="NEWS", columnspan=2)
 
         self.user_but.grid(column=0, row=0, sticky="NSW", padx=(0, 5))
-        self.user_but.configure(text=self.app.username)
+        self.user_but.configure(text="Profile")
         self.post_but.grid(column=3, row=0, sticky="NS", padx=(5, 5))
         self.search_but.grid(column=2, row=0, sticky="NS", padx=(5, 5))
         self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 0))
-        self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(240, 0))
+        self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(240, 5))
+        self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
         self.page_frame.grid(column=0, row=1, columnspan=2)
 
         self.back_but.grid(column=0, row=2, sticky="W")
         self.next_but.grid(column=1, row=2, sticky="E")
+
+        self.app.root.title("{}'s FitBook".format(self.app.username))
 
         self.load()
 
@@ -612,6 +680,8 @@ class Main:
 
         self.back_but.grid_forget()
         self.next_but.grid_forget()
+
+        self.app.root.title("FitBook")
 
     def clear_posts(self):
         for post in self.posts:
