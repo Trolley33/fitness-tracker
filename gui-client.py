@@ -214,8 +214,7 @@ class SearchFrame:
             cmd = lambda: self.container.container.load(self.id)
             text = "View profile"
         else:
-            cmd = lambda: self.container.container.app.out_queue.put("friends|{}|{}"
-                                                                     .format(self.container.container.app.id, self.id))
+            cmd = self.add_friend
             text = "Add friend"
 
         self.frame = tk.Frame(self.container.top, bg="white")
@@ -228,6 +227,10 @@ class SearchFrame:
         self.profile_button = tk.Button(self.frame, text=text, bd=0, fg="royalblue3", bg="white",
                                         font=("trebuchet ms", 12, "bold"),
                                         command=cmd)
+
+    def add_friend(self):
+        self.container.container.app.out_queue.put("friends|{}|{}".format(self.container.container.app.id, self.id))
+        self.profile_button.configure(command=lambda: App.popup("info", "Already sent a request!"))
 
     def draw(self):
         self.frame.grid(column=0, row=self.row, pady=(5, 5), sticky="NSWE", columnspan=2)
@@ -275,14 +278,10 @@ class FriendDialog:
         self.left.grid(column=0, row=1, padx=10)
         self.right.grid(column=1, row=1, padx=10)
 
-        for i, p in enumerate(self.pending):
-            p.draw()
-
-        for i, c in enumerate(self.current):
-            c.draw()
-
     def get_stuff(self):
         self.container.app.out_queue.put("pending|{}".format(self.container.app.id))
+        self.clear()
+        print(self.pending, self.current)
         pending, current = [], []
         try:
             pending = eval(self.container.app.in_queue.get(True, 4))
@@ -308,6 +307,18 @@ class FriendDialog:
 
         if not self.current:
             self.current.append(Friend(self, 0, "Nothing here!", -1, -1, self.right))
+
+        for i, p in enumerate(self.pending):
+            p.draw()
+
+        for i, c in enumerate(self.current):
+            c.draw()
+
+    def clear(self):
+        for p in self.pending + self.current:
+            p.destroy()
+        self.pending = []
+        self.current = []
 
 
 class Friend:
@@ -353,11 +364,11 @@ class Friend:
 
     def remove(self):
         self.container.container.app.out_queue.put("remove|{}|{}".format(self.id, self.container.container.app.id))
-        self.destroy()
+        self.container.container.app.root.after(2000, self.container.get_stuff)
 
     def accept(self):
         self.container.container.app.out_queue.put("accept|{}|{}".format(self.id, self.container.container.app.id))
-        self.destroy()
+        self.container.container.app.root.after(2000, self.container.get_stuff)
 
     def destroy(self):
         self.frame.destroy()
