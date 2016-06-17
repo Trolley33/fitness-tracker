@@ -15,7 +15,7 @@ global SERVER
 if socket.gethostname() == "Trolley":
     SERVER = ("Trolley", 54321)
 else:
-    SERVER = ("ICT-F16-002", 54321)
+    SERVER = ("SCI-STUD-005", 54321)
 
 
 class Post:
@@ -364,11 +364,11 @@ class Friend:
 
     def remove(self):
         self.container.container.app.out_queue.put("remove|{}|{}".format(self.id, self.container.container.app.id))
-        self.container.container.app.root.after(2000, self.container.get_stuff)
+        self.container.container.app.root.after(1000, self.container.get_stuff)
 
     def accept(self):
         self.container.container.app.out_queue.put("accept|{}|{}".format(self.id, self.container.container.app.id))
-        self.container.container.app.root.after(2000, self.container.get_stuff)
+        self.container.container.app.root.after(1000, self.container.get_stuff)
 
     def destroy(self):
         self.frame.destroy()
@@ -391,8 +391,14 @@ class App:
 
         self.s = socket.socket()
 
-        self.s.connect(SERVER)
-
+        try:
+            self.s.connect(SERVER)
+        except Exception as e:
+            self.root.after(3500, self.root.destroy)
+            App.popup("error", "No connection could be established, app will close.")
+            del self
+            exit()
+        
         self.out_queue = queue.Queue()
         self.in_queue = queue.Queue()
 
@@ -410,7 +416,7 @@ class App:
     def handler(self, s, a):
         while 1:
             try:
-                ready = select.select([s], [], [], 0.5)
+                ready = select.select([s], [], [], 0.25)
                 if ready[0]:
                     reply = s.recv(1024)
                     reply = reply.decode()
@@ -506,6 +512,8 @@ class Login:
             success = self.app.in_queue.get(True, 10)
             if success == "true":
                 App.popup("info", "Successfully signed up.")
+            elif success == "false":
+                App.popup("info", "An account with that username already exists.")
 
     def login(self):
         name = self.user_entry.get()
@@ -599,7 +607,7 @@ class Main:
 
     def submit(self, activity, meta, text):
         self.app.out_queue.put("new|{}|{}|{}|{}".format(self.app.id, activity, meta, text))
-        self.app.root.after(2000, self.load)
+        self.app.root.after(1000, self.load)
 
     def load(self, id=-1):
         self.clear_posts()
