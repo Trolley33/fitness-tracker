@@ -43,7 +43,7 @@ s.listen(10)
 def handler(c, a):
     while 1:
         try:
-            ready = select.select([c], [], [], 0.5)
+            ready = select.select([c], [], [], 0.25)
             if ready[0]:
                 reply = c.recv(1024)
                 reply = reply.decode()
