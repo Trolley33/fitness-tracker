@@ -15,7 +15,7 @@ global SERVER
 if socket.gethostname() == "Trolley":
     SERVER = ("Trolley", 54321)
 else:
-    SERVER = ("ICT-F16-019", 54321)
+    SERVER = ("SCI-STUD-010", 54321)
 
 
 class Post:
@@ -33,11 +33,11 @@ class Post:
         self.text = text
         self.user_id = user_id
 
-        self.user_lab = tk.Label(self.frame, text=self.username, fg="firebrick2", bg="white",
+        self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
         self.activity_lab = tk.Label(self.frame, text=self.activity, fg="black", bg="white",
                                      font=("trebuchet ms", 12, "bold"))
-        self.profile_button = tk.Button(self.frame, text="View Profile", bd=0, fg="firebrick3", bg="white",
+        self.profile_button = tk.Button(self.frame, text="View Profile", bd=0, fg="royalblue3", bg="white",
                                         font=("trebuchet ms", 12, "bold"),
                                         command=lambda: self.container.load(self.user_id))
         self.date_lab = tk.Label(self.frame, text=self.date, fg="black", bg="white",
@@ -74,7 +74,7 @@ class PostDialog:
         self.top = tk.Toplevel(self.container.app.root)
         self.top.title("Share Your Experiences!")
         self.top.geometry("640x208")
-        self.top.configure(bg="firebrick2")
+        self.top.configure(bg="royalblue2")
         self.top.columnconfigure(0, minsize=320)
 
         self.selected_opt = tk.StringVar(self.top)
@@ -87,17 +87,17 @@ class PostDialog:
                                     ["Coding", "code"]])
 
         self.act_lab = tk.Label(self.top, text="What did you do today?", font=("trebuchet ms", 12, "bold"),
-                                fg="white", bg="firebrick2")
+                                fg="white", bg="royalblue2")
         self.meta_lab = tk.Label(self.top, text="No activity selected.", font=("trebuchet ms", 12, "bold"),
-                                 fg="white", bg="firebrick2")
+                                 fg="white", bg="royalblue2")
         self.text_lab = tk.Label(self.top, text="How was it?", font=("trebuchet ms", 12, "bold"),
-                                 fg="white", bg="firebrick2")
+                                 fg="white", bg="royalblue2")
 
         self.menu = tk.OptionMenu(self.top, self.selected_opt, *self.options.keys())
 
-        self.menu.configure(bd=0, bg="firebrick2", fg="white", width=10, relief="flat",
-                            activeforeground="white", activebackground="firebrick2")
-        self.menu["menu"].config(bd=0, bg="firebrick2", fg="white",
+        self.menu.configure(bd=0, bg="royalblue2", fg="white", width=10, relief="flat",
+                            activeforeground="white", activebackground="royalblue2")
+        self.menu["menu"].config(bd=0, bg="royalblue2", fg="white",
                                  activeforeground="white", relief="flat")
 
         self.meta = tk.Entry(self.top, font=("trebuchet ms", 11), width=10)
@@ -107,7 +107,7 @@ class PostDialog:
 
         self.scroll_bar = tk.Scrollbar(self.top, command=self.text.yview)
         self.text['yscrollcommand'] = self.scroll_bar.set
-        self.submit_but = tk.Button(self.top, text="Submit", command=self.validate, bg="firebrick3", fg="white",
+        self.submit_but = tk.Button(self.top, text="Submit", command=self.validate, bg="steelblue2", fg="white",
                                     bd=0, width=7, font=("trebuchet ms", 12))
 
         self.draw()
@@ -221,10 +221,10 @@ class SearchFrame:
         self.frame.columnconfigure(0, minsize=100)
         self.frame.columnconfigure(1, minsize=100)
 
-        self.user_lab = tk.Label(self.frame, text=self.username, fg="firebrick2", bg="white",
+        self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
 
-        self.profile_button = tk.Button(self.frame, text=text, bd=0, fg="firebrick3", bg="white",
+        self.profile_button = tk.Button(self.frame, text=text, bd=0, fg="royalblue3", bg="white",
                                         font=("trebuchet ms", 12, "bold"),
                                         command=cmd)
 
@@ -257,9 +257,9 @@ class FriendDialog:
         self.top.columnconfigure(0, minsize=240)
         self.top.columnconfigure(1, minsize=240)
 
-        self.title_l = tk.Label(self.top, text="Requests", fg="white", bg="firebrick2",
+        self.title_l = tk.Label(self.top, text="Requests", fg="white", bg="royalblue2",
                                 font=("trebuchet ms", 14, "bold"))
-        self.title_r = tk.Label(self.top, text="Friends", fg="white", bg="firebrick2",
+        self.title_r = tk.Label(self.top, text="Friends", fg="white", bg="royalblue2",
                                 font=("trebuchet ms", 14, "bold"))
 
         self.left = tk.Frame(self.top, bg="gray90")
@@ -348,10 +348,10 @@ class Friend:
             self.frame.columnconfigure(0, minsize=0)
             self.frame.columnconfigure(1, minsize=0)
 
-        self.user_lab = tk.Label(self.frame, text=self.username, fg="firebrick2", bg="white",
+        self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
 
-        self.profile_button = tk.Button(self.frame, text=text, bd=0, fg="firebrick3", bg="white",
+        self.profile_button = tk.Button(self.frame, text=text, bd=0, fg="royalblue3", bg="white",
                                         font=("trebuchet ms", 12, "bold"),
                                         command=cmd)
 
@@ -383,7 +383,7 @@ class App:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("FitBook")
-        self.root.configure(bg="firebrick1")
+        self.root.configure(bg="royalblue2")
         self.root.resizable(width=False, height=False)
 
         self.id = -1
@@ -447,28 +447,28 @@ class App:
 class Login:
     def __init__(self, app):
         self.app = app
-        self.title = tk.Label(text="FitBook", font=("trebuchet ms", 20, "bold"), bg="firebrick3",
+        self.title = tk.Label(text="FitBook", font=("trebuchet ms", 20, "bold"), bg="royalblue3",
                               fg="white")
 
-        self.main_frame = tk.Frame(bg="firebrick1")
+        self.main_frame = tk.Frame(bg="royalblue2")
 
-        self.mini_frame = tk.Frame(self.main_frame, bg="firebrick1")
+        self.mini_frame = tk.Frame(self.main_frame, bg="royalblue2")
 
-        self.user_lab = tk.Label(self.mini_frame, text="Username:", font=("trebuchet ms", 13), bg="firebrick1",
+        self.user_lab = tk.Label(self.mini_frame, text="Username:", font=("trebuchet ms", 13), bg="royalblue2",
                                  fg="white")
         self.user_entry = tk.Entry(self.mini_frame, font=("trebuchet ms", 10))
 
-        self.pass_lab = tk.Label(self.mini_frame, text="Password:", font=("trebuchet ms", 13), bg="firebrick1",
+        self.pass_lab = tk.Label(self.mini_frame, text="Password:", font=("trebuchet ms", 13), bg="royalblue2",
                                  fg="white")
         self.pass_entry = tk.Entry(self.mini_frame, font=("trebuchet ms", 10), show="•")
 
-        self.signup_button = tk.Button(self.main_frame, text="Sign up", bg="firebrick3", fg="white", bd=0, width=7,
+        self.signup_button = tk.Button(self.main_frame, text="Sign up", bg="steelblue2", fg="white", bd=0, width=7,
                                        command=self.signup, font=("trebuchet ms", 12))
-        self.login_button = tk.Button(self.main_frame, text="Log In", bg="firebrick3", fg="white", bd=0, width=7,
+        self.login_button = tk.Button(self.main_frame, text="Log In", bg="steelblue2", fg="white", bd=0, width=7,
                                       command=self.login, font=("trebuchet ms", 12))
 
     def draw(self):
-        self.app.root.configure(bg="firebrick1")
+        self.app.root.configure(bg="royalblue2")
 
         self.title.grid(column=0, row=0, sticky="NEWS")
 
@@ -528,6 +528,7 @@ class Login:
                 if valid[0] == "true":
                     self.app.id = valid[1]
                     self.app.username = name
+                    # do stuff
                     self.undraw()
                     self.app.main.draw()
                 elif valid[0] == "false":
@@ -555,32 +556,32 @@ class Main:
         self.page = 1
         self.current_profile = -1
 
-        self.top_bar = tk.Frame(bg="firebrick3")
+        self.top_bar = tk.Frame(bg="royalblue3")
 
-        self.user_but = tk.Button(self.top_bar, text="Oi!", bg="firebrick2", fg="white", width=6,
+        self.user_but = tk.Button(self.top_bar, text="Oi!", bg="royalblue2", fg="white", width=6,
                                   font=("trebuchet ms", 12), padx=5, bd=0, command=self.load)
 
-        self.post_but = tk.Button(self.top_bar, text="Post Something", bg="firebrick2", fg="white", bd=0, width=14,
+        self.post_but = tk.Button(self.top_bar, text="Post Something", bg="royalblue2", fg="white", bd=0, width=14,
                                   command=self.post, font=("trebuchet ms", 12))
 
-        self.search_but = tk.Button(self.top_bar, text="Search", bg="firebrick2", fg="white", bd=0,
+        self.search_but = tk.Button(self.top_bar, text="Search", bg="royalblue2", fg="white", bd=0,
                                     width=8, command=self.search, font=("trebuchet ms", 12))
 
-        self.friends_but = tk.Button(self.top_bar, text="Friends", bg="firebrick2", fg="white", bd=0,
+        self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2", fg="white", bd=0,
                                      width=8, command=self.friends, font=("trebuchet ms", 12))
 
-        self.refresh_but = tk.Button(self.top_bar, text="↻", bg="firebrick2", fg="white", bd=0,
+        self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
                                      width=3, command=lambda: self.load(self.current_profile),
                                      font=("trebuchet ms", 12))
 
-        self.logout_but = tk.Button(self.top_bar, text="Log Out", bg="firebrick2", fg="white", bd=0, width=7,
+        self.logout_but = tk.Button(self.top_bar, text="Log Out", bg="royalblue2", fg="white", bd=0, width=7,
                                     command=self.logout, font=("trebuchet ms", 12))
 
         self.page_frame = tk.Frame(bg="gray90")
 
-        self.back_but = tk.Button(text="<--", bg="gray90", fg="firebrick2", bd=0, width=4,
+        self.back_but = tk.Button(text="<--", bg="gray90", fg="royalblue2", bd=0, width=4,
                                   command=self.back, font=("trebuchet ms", 15))
-        self.next_but = tk.Button(text="-->", bg="gray90", fg="firebrick2", bd=0, width=4,
+        self.next_but = tk.Button(text="-->", bg="gray90", fg="royalblue2", bd=0, width=4,
                                   command=self.next, font=("trebuchet ms", 15))
 
         self.posts = []
