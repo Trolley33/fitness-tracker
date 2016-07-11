@@ -15,9 +15,14 @@ global SERVER
 if socket.gethostname() == "Trolley":
     SERVER = ("Trolley", 54321)
 else:
-    SERVER = ("SCI-STUD-010", 54321)
+    SERVER = ("ICT-F16-019", 54321)
 
-
+# Post container
+# -----------------------------------------------
+# | <Username> <Activity> <Amount> View Profile |
+# | <Body of text>                              |
+# |                                      <Date> |
+# -----------------------------------------------
 class Post:
     def __init__(self, container, username, activity, date, text, user_id):
         self.container = container
@@ -66,7 +71,11 @@ class Post:
         self.date_lab.destroy()
         del self
 
-
+# Post Popup Dialog
+# What did you do: <dropdown>
+# How much did you do <textentry>
+# How was it <textarea>
+# <Submit>
 class PostDialog:
     def __init__(self, container):
         self.container = container
@@ -156,7 +165,7 @@ class PostDialog:
         else:
             self.meta_lab.configure(text="No activity selected.")
 
-
+# Search 
 class SearchDialog:
     def __init__(self, container):
         self.container = container
@@ -379,6 +388,24 @@ class Friend:
         del self
 
 
+class StatisticsDialog:
+    def __init__(self, container):
+        self.container = container
+        self.top = tk.Toplevel(self.container.app.root, bg="gray90")
+        self.top.title("Statistics")
+        
+        self.username_label = tk.Label(self.top, text="{}'s Statistics Page".format(self.container.app.username), 
+                                       fg="white", bg="royalblue2", font=("trebuchet ms", 14, "bold"))
+        self.draw()
+        self.get_stuff()
+
+    def draw(self):
+        self.username_label.grid(column=0, row=0)
+
+    def get_stuff(self, period=7):
+        self.container.app.out_queue.put("activities|{}|{}".format(self.container.app.id, period))
+        print(self.container.app.in_queue.get(True, 4))
+
 class App:
     def __init__(self):
         self.root = tk.Tk()
@@ -570,6 +597,9 @@ class Main:
         self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2", fg="white", bd=0,
                                      width=8, command=self.friends, font=("trebuchet ms", 12))
 
+        self.stats_but = tk.Button(self.top_bar, text="Statistics", bg="royalblue2", fg="white", bd=0,
+                                   width=10, command=self.stats, font=("trebuchet ms", 12))
+
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
                                      width=3, command=lambda: self.load(self.current_profile),
                                      font=("trebuchet ms", 12))
@@ -594,6 +624,9 @@ class Main:
 
     def friends(self):
         FriendDialog(self)
+
+    def stats(self):
+        StatisticsDialog(self)
 
     def back(self):
         if self.page > 1:
@@ -680,7 +713,8 @@ class Main:
         self.user_but.configure(text="Profile")
         self.post_but.grid(column=3, row=0, sticky="NS", padx=(5, 5))
         self.search_but.grid(column=2, row=0, sticky="NS", padx=(5, 5))
-        self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 0))
+        self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 5))
+        self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 0))
         self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(240, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
