@@ -19,7 +19,7 @@ else:
 
 
 class Post:
-    def __init__(self, container, username, activity, date, text, user_id):
+    def __init__(self, container, username, activity, date, text, user_id, feed_id):
         self.container = container
         self.page_f = container.page_frame
 
@@ -32,6 +32,7 @@ class Post:
         self.date = date
         self.text = text
         self.user_id = user_id
+        self.feed_id = feed_id
 
         self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
@@ -50,11 +51,21 @@ class Post:
 
         self.user_lab.grid(column=0, row=0, sticky="W", padx=5)
         self.activity_lab.grid(column=1, row=0, sticky="W", padx=5)
-        if self.user_id != -1:
+        if self.user_id > 0:
+            self.profile_button.configure(command=lambda: self.container.load(self.user_id), text="View Profile", bd=0,
+                                          fg="royalblue3", bg="white")
+            self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
+        elif (self.user_id < 0 and abs(self.user_id) == self.container.app.id) or Login.admin:
+            self.profile_button.configure(command=self.remove_post, text="Delete Post", bd=0,
+                                          fg="red", bg="white")
             self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
 
         self.text_lab.grid(column=0, row=1, columnspan=5, sticky="W", padx=(10, 10))
         self.date_lab.grid(column=4, row=2, sticky="E")
+
+    def remove_post(self):
+        self.container.app.out_queue.put("deletepost|{}".format(self.feed_id))
+        self.container.load(self.container.current_profile)
 
     def delete(self):
         self.frame.destroy()
@@ -445,6 +456,8 @@ class App:
 
 
 class Login:
+    admin = False
+
     def __init__(self, app):
         self.app = app
         self.title = tk.Label(text="FitBook", font=("trebuchet ms", 20, "bold"), bg="royalblue3",
@@ -526,7 +539,8 @@ class Login:
                 self.app.out_queue.put("login|{}|{}".format(name, hash))
                 valid = self.app.in_queue.get(True, 5).split("|")
                 if valid[0] == "true":
-                    self.app.id = valid[1]
+                    self.app.id = int(valid[1])
+                    Login.admin = bool(int(valid[2]))
                     self.app.username = name
                     # do stuff
                     self.undraw()
@@ -554,7 +568,7 @@ class Main:
         self.app = app
 
         self.page = 1
-        self.current_profile = -1
+        self.current_profile = 0
 
         self.top_bar = tk.Frame(bg="royalblue3")
 
@@ -609,7 +623,7 @@ class Main:
         self.app.out_queue.put("new|{}|{}|{}|{}".format(self.app.id, activity, meta, text))
         self.app.root.after(1000, self.load)
 
-    def load(self, id=-1):
+    def load(self, id=0):
         self.clear_posts()
         options = {
             "run": "Ran {} kilometres.",
@@ -618,11 +632,12 @@ class Main:
             "cycle": "Cycled {} kilometres.",
             "code": "Coded {} lines."
         }
-        if id == -1:
-            if self.current_profile != -1:
+        # load feed
+        if id == 0:
+            if self.current_profile != 0:
                 self.page = 1
             self.app.out_queue.put("feed|{}|{}".format(self.app.id, self.page * 5))
-            self.current_profile = -1
+            self.current_profile = 0
             feed = self.app.in_queue.get(True, 2)
             feed = eval(feed)
             for i, p in enumerate(feed):
@@ -632,13 +647,15 @@ class Main:
                 d = p[3]
                 t = p[4]
                 id = p[5]
+                f_id = p[6]
                 if a in options.keys():
                     a = options[a].format(m)
                 else:
                     a = ""
-                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=id))
+                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=id, feed_id=f_id))
                 self.posts[-1].draw(i)
             self.user_but.configure(text="Profile", command=lambda: self.load(self.app.id))
+        # load other page
         else:
             # query server for profile
             if self.current_profile != id:
@@ -653,11 +670,12 @@ class Main:
                 m = p[2]
                 d = p[3]
                 t = p[4]
+                f_id = p[5]
                 if a in options.keys():
                     a = options[a].format(m)
                 else:
                     a = ""
-                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=-1))
+                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=-id, feed_id=f_id))
                 self.posts[-1].draw(i)
             self.user_but.configure(text="Feed", command=self.load)
         if len(self.posts) == 0:
