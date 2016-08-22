@@ -60,7 +60,8 @@ def handler(c, a):
                 if split[0] == "profile" and len(split) >= 3:
                     friend_id = split[1]
                     user_id = split[2]
-                    if friend_id != user_id:
+                    flag = int(split[3])
+                    if friend_id != user_id and not flag:
                         query = """SELECT * FROM friends
                                    WHERE ((friends.friend_id = {0} AND friends.id = {1})
                                    OR (friends.friend_id = {1} AND friends.id = {0}))
@@ -273,6 +274,21 @@ def handler(c, a):
                     query = """DELETE FROM feed
                             WHERE feed_id = '{}'""".format(feed_id)
 
+                    db_in.put(query)
+                    db_out.get()
+
+                if split[0] == "deleteacc" and len(split) == 2:
+                    acc_id = split[1]
+                    query = """DELETE FROM login
+                               WHERE id = '{}'""".format(acc_id)
+                    db_in.put(query)
+                    db_out.get()
+                    query = """DELETE FROM feed
+                               WHERE id = '{}'""".format(acc_id)
+                    db_in.put(query)
+                    db_out.get()
+                    query = """DELETE FROM friends
+                               WHERE id = '{0}' OR friend_id='{0}'""".format(acc_id)
                     db_in.put(query)
                     db_out.get()
 
