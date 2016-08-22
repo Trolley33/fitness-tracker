@@ -15,16 +15,11 @@ global SERVER
 if socket.gethostname() == "Trolley":
     SERVER = ("Trolley", 54321)
 else:
-    SERVER = ("ICT-F16-019", 54321)
+    SERVER = ("SCI-STUD-010", 54321)
 
-# Post container
-# -----------------------------------------------
-# | <Username> <Activity> <Amount> View Profile |
-# | <Body of text>                              |
-# |                                      <Date> |
-# -----------------------------------------------
+
 class Post:
-    def __init__(self, container, username, activity, date, text, user_id):
+    def __init__(self, container, username, activity, date, text, user_id, feed_id):
         self.container = container
         self.page_f = container.page_frame
 
@@ -37,6 +32,7 @@ class Post:
         self.date = date
         self.text = text
         self.user_id = user_id
+        self.feed_id = feed_id
 
         self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
@@ -55,11 +51,21 @@ class Post:
 
         self.user_lab.grid(column=0, row=0, sticky="W", padx=5)
         self.activity_lab.grid(column=1, row=0, sticky="W", padx=5)
-        if self.user_id != -1:
+        if self.user_id > 0:
+            self.profile_button.configure(command=lambda: self.container.load(self.user_id), text="View Profile", bd=0,
+                                          fg="royalblue3", bg="white")
+            self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
+        elif (self.user_id < 0 and abs(self.user_id) == self.container.app.id) or Login.admin:
+            self.profile_button.configure(command=self.remove_post, text="Delete Post", bd=0,
+                                          fg="red", bg="white")
             self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
 
         self.text_lab.grid(column=0, row=1, columnspan=5, sticky="W", padx=(10, 10))
         self.date_lab.grid(column=4, row=2, sticky="E")
+
+    def remove_post(self):
+        self.container.app.out_queue.put("deletepost|{}".format(self.feed_id))
+        self.container.load(self.container.current_profile)
 
     def delete(self):
         self.frame.destroy()
@@ -71,11 +77,7 @@ class Post:
         self.date_lab.destroy()
         del self
 
-# Post Popup Dialog
-# What did you do: <dropdown>
-# How much did you do <textentry>
-# How was it <textarea>
-# <Submit>
+
 class PostDialog:
     def __init__(self, container):
         self.container = container
@@ -165,7 +167,7 @@ class PostDialog:
         else:
             self.meta_lab.configure(text="No activity selected.")
 
-# Search 
+
 class SearchDialog:
     def __init__(self, container):
         self.container = container
@@ -388,24 +390,6 @@ class Friend:
         del self
 
 
-class StatisticsDialog:
-    def __init__(self, container):
-        self.container = container
-        self.top = tk.Toplevel(self.container.app.root, bg="gray90")
-        self.top.title("Statistics")
-        
-        self.username_label = tk.Label(self.top, text="{}'s Statistics Page".format(self.container.app.username), 
-                                       fg="white", bg="royalblue2", font=("trebuchet ms", 14, "bold"))
-        self.draw()
-        self.get_stuff()
-
-    def draw(self):
-        self.username_label.grid(column=0, row=0)
-
-    def get_stuff(self, period=7):
-        self.container.app.out_queue.put("activities|{}|{}".format(self.container.app.id, period))
-        print(self.container.app.in_queue.get(True, 4))
-
 class App:
     def __init__(self):
         self.root = tk.Tk()
@@ -472,6 +456,8 @@ class App:
 
 
 class Login:
+    admin = False
+
     def __init__(self, app):
         self.app = app
         self.title = tk.Label(text="FitBook", font=("trebuchet ms", 20, "bold"), bg="royalblue3",
@@ -553,7 +539,8 @@ class Login:
                 self.app.out_queue.put("login|{}|{}".format(name, hash))
                 valid = self.app.in_queue.get(True, 5).split("|")
                 if valid[0] == "true":
-                    self.app.id = valid[1]
+                    self.app.id = int(valid[1])
+                    Login.admin = bool(int(valid[2]))
                     self.app.username = name
                     # do stuff
                     self.undraw()
@@ -581,7 +568,7 @@ class Main:
         self.app = app
 
         self.page = 1
-        self.current_profile = -1
+        self.current_profile = 0
 
         self.top_bar = tk.Frame(bg="royalblue3")
 
@@ -596,9 +583,6 @@ class Main:
 
         self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2", fg="white", bd=0,
                                      width=8, command=self.friends, font=("trebuchet ms", 12))
-
-        self.stats_but = tk.Button(self.top_bar, text="Statistics", bg="royalblue2", fg="white", bd=0,
-                                   width=10, command=self.stats, font=("trebuchet ms", 12))
 
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
                                      width=3, command=lambda: self.load(self.current_profile),
@@ -625,9 +609,6 @@ class Main:
     def friends(self):
         FriendDialog(self)
 
-    def stats(self):
-        StatisticsDialog(self)
-
     def back(self):
         if self.page > 1:
             self.page -= 1
@@ -642,7 +623,7 @@ class Main:
         self.app.out_queue.put("new|{}|{}|{}|{}".format(self.app.id, activity, meta, text))
         self.app.root.after(1000, self.load)
 
-    def load(self, id=-1):
+    def load(self, id=0):
         self.clear_posts()
         options = {
             "run": "Ran {} kilometres.",
@@ -651,11 +632,12 @@ class Main:
             "cycle": "Cycled {} kilometres.",
             "code": "Coded {} lines."
         }
-        if id == -1:
-            if self.current_profile != -1:
+        # load feed
+        if id == 0:
+            if self.current_profile != 0:
                 self.page = 1
             self.app.out_queue.put("feed|{}|{}".format(self.app.id, self.page * 5))
-            self.current_profile = -1
+            self.current_profile = 0
             feed = self.app.in_queue.get(True, 2)
             feed = eval(feed)
             for i, p in enumerate(feed):
@@ -665,13 +647,15 @@ class Main:
                 d = p[3]
                 t = p[4]
                 id = p[5]
+                f_id = p[6]
                 if a in options.keys():
                     a = options[a].format(m)
                 else:
                     a = ""
-                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=id))
+                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=id, feed_id=f_id))
                 self.posts[-1].draw(i)
             self.user_but.configure(text="Profile", command=lambda: self.load(self.app.id))
+        # load other page
         else:
             # query server for profile
             if self.current_profile != id:
@@ -686,11 +670,12 @@ class Main:
                 m = p[2]
                 d = p[3]
                 t = p[4]
+                f_id = p[5]
                 if a in options.keys():
                     a = options[a].format(m)
                 else:
                     a = ""
-                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=-1))
+                self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=-id, feed_id=f_id))
                 self.posts[-1].draw(i)
             self.user_but.configure(text="Feed", command=self.load)
         if len(self.posts) == 0:
@@ -713,8 +698,7 @@ class Main:
         self.user_but.configure(text="Profile")
         self.post_but.grid(column=3, row=0, sticky="NS", padx=(5, 5))
         self.search_but.grid(column=2, row=0, sticky="NS", padx=(5, 5))
-        self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 5))
-        self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 0))
+        self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 0))
         self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(240, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
