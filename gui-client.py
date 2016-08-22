@@ -64,7 +64,7 @@ class Post:
             self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
         elif (self.user_id < 0 and abs(self.user_id) == self.container.app.id) or Login.admin:
             self.profile_button.configure(command=self.remove_post, text="Delete Post", bd=0,
-                                          fg="red", bg="white")
+                                          fg="firebrick3", bg="white")
             self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
 
         self.text_lab.grid(column=0, row=1, columnspan=5, sticky="W", padx=(10, 10))
@@ -232,7 +232,7 @@ class SearchFrame:
         self.id = id
         self.is_friend = is_friend
 
-        if is_friend:
+        if is_friend or Login.admin:
             cmd = lambda: self.container.container.load(self.id)
             text = "View profile"
         else:
@@ -476,6 +476,7 @@ class StatisticsDialog:
             lab.configure(text="")
             lab.grid_forget()
 
+
 class App:
     def __init__(self):
         self.root = tk.Tk()
@@ -671,6 +672,8 @@ class Main:
                                      width=8, command=self.friends, font=("trebuchet ms", 12))
         self.stats_but = tk.Button(self.top_bar, text="Statistics", bg="royalblue2", fg="white", bd=0,
                                    width=10, command=self.stats, font=("trebuchet ms", 12))
+        self.delete_but = tk.Button(self.top_bar, text="Delete Account", bg="firebrick3", fg="white", bd=0,
+                                    width=15, command=self.delete_account, font=("trebuchet ms", 12))
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
                                      width=3, command=lambda: self.load(self.current_profile),
                                      font=("trebuchet ms", 12))
@@ -699,6 +702,16 @@ class Main:
     def stats(self):
         StatisticsDialog(self)
 
+    def delete_account(self):
+        yn = messagebox.askyesno("Confirmation", "Deleting this account will remove it permanently from the server.\n"
+                                                 "Are you sure?")
+        if yn:
+            self.app.out_queue.put("deleteacc|{}".format(self.current_profile))
+            if self.current_profile == self.app.id:
+                self.logout()
+            else:
+                self.load()
+
     def back(self):
         if self.page > 1:
             self.page -= 1
@@ -723,6 +736,8 @@ class Main:
         }
         # load feed
         if id == 0:
+            self.delete_but.grid_forget()
+            self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(235, 5))
             if self.current_profile != 0:
                 self.page = 1
             self.app.out_queue.put("feed|{}|{}".format(self.app.id, self.page * 5))
@@ -749,8 +764,14 @@ class Main:
             # query server for profile
             if self.current_profile != id:
                 self.page = 1
-            self.app.out_queue.put("profile|{}|{}|{}".format(id, self.app.id, self.page * 5))
+            flag = 0
+            if Login.admin:
+                flag = 1
+            self.app.out_queue.put("profile|{}|{}|{}|{}".format(id, self.app.id, self.page * 5, flag))
             self.current_profile = id
+            if Login.admin or self.current_profile == self.app.id:
+                self.delete_but.grid(column=98, row=0, sticky="NS", padx=(84, 5))
+                self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(5, 5))
             prof = self.app.in_queue.get(True, 2)
             prof = eval(prof)
             for i, p in enumerate(prof):
@@ -788,8 +809,8 @@ class Main:
         self.post_but.grid(column=3, row=0, sticky="NS", padx=(5, 5))
         self.search_but.grid(column=2, row=0, sticky="NS", padx=(5, 5))
         self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 5))
-        self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 0))
-        self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(240, 5))
+        self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 5))
+        self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(235, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
         self.page_frame.grid(column=0, row=1, columnspan=2)
