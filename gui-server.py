@@ -4,6 +4,8 @@ import socket
 import sqlite3
 import threading
 
+def scrub(text):
+    return text.replace("'", "''")
 
 def db_handler(db_name):
     db = sqlite3.connect(db_name)
@@ -46,7 +48,7 @@ def handler(c, a):
             ready = select.select([c], [], [], 0.25)
             if ready[0]:
                 reply = c.recv(1024)
-                reply = reply.decode()
+                reply = scrub(reply.decode())
                 if not reply:
                     break
                 print('* received:', reply)
@@ -136,9 +138,9 @@ def handler(c, a):
                     else:
                         msg = "false"
                 if split[0] == "signup" and len(split) == 4:
-                    name = split[1].replace("'", "''")
-                    hash = split[2].replace("'", "''")
-                    salt = split[3].replace("'", "''")
+                    name = split[1]
+                    hash = split[2]
+                    salt = split[3]
                     query = """SELECT login.id
                                FROM login
                                WHERE login.username='{}'""".format(name)
@@ -162,11 +164,11 @@ def handler(c, a):
                         msg = "true"
 
                 if split[0] == "new" and len(split) == 5:
-                    id = split[1].replace("'", "''")
-                    act = split[2].replace("'", "''")
-                    meta = split[3].replace("'", "''").replace('\n', '')
-                    text = split[4].replace("'", "''").replace('\n', '')
-                    query = """INSERT INTO feed (id, activity, text, date, metadata)
+                    id = split[1]
+                    act = split[2]
+                    meta = split[3].replace('\n', '')
+                    text = split[4].replace('\n', '')
+                    query = """INSERT INTO feed
                                VALUES ('{}', '{}', '{}', datetime('now', 'localtime'), '{}')""".format(id, act, text,
                                                                                                        meta)
 
@@ -174,13 +176,13 @@ def handler(c, a):
                     db_out.get(True, 10)
                     print("added")
                 if split[0] == "search" and len(split) == 3:
-                    id = split[1].replace("'", "''")
-                    name = split[2].replace("'", "''")
+                    id = split[1]
+                    name = split[2]
                     query = """SELECT login.id, username FROM login
                                JOIN friends
                                ON (login.id=friends.id AND friends.friend_id='{1}')
                                OR (login.id=friends.friend_id AND friends.id='{1}')
-                               WHERE username LIKE '%{0}%' AND state='active'
+                               WHERE username LIKE '%{0}%'
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     friends = db_out.get(True, 10)
@@ -201,8 +203,8 @@ def handler(c, a):
                         msg = "[[], []]"
 
                 if split[0] == "friends" and len(split) == 3:
-                    id1 = split[1].replace("'", "''")
-                    id2 = split[2].replace("'", "''")
+                    id1 = split[1]
+                    id2 = split[2]
 
                     query = "INSERT INTO friends VALUES ('{}', '{}', 'waiting', datetime('now'))".format(id1, id2)
                     db_in.put(query)
@@ -263,12 +265,26 @@ def handler(c, a):
 
                     db_in.put(query)
                     db_out.get()
+                if split[0] == "activities" and len(split) == 3:
+                    id = split[1]
+                    timespan = int(split[2])
+                    date = ""
+                    if timespan > 0:
+                        date = "date >= datetime('now' , '-{} day', 'localtime') AND".format(timespan)
+                    query = """SELECT activity, metadata FROM feed
+                               WHERE {} id='{}' AND activity <> '' """.format(date, id)
+                    db_in.put(query)
+                    result = db_out.get()
+                    if result:
+                        msg = str(result)
+                        print(result)
+                    else:
+                        msg = "[]"
 
                 if split[0] == "deletepost" and len(split) == 2:
-                    feed_id = split[1]
+                    f_id = split[1]
                     query = """DELETE FROM feed
-                            WHERE feed_id = '{}'""".format(feed_id)
-
+                               WHERE feed.feed_id = '{}'""".format(f_id)
                     db_in.put(query)
                     db_out.get()
 
@@ -289,3 +305,4 @@ while 1:
     t = threading.Thread(target=handler, args=(client, address))
     t.setDaemon(True)
     t.start()
+

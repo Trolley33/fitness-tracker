@@ -1,3 +1,4 @@
+import operator
 import hashlib
 import queue
 import random
@@ -15,9 +16,14 @@ global SERVER
 if socket.gethostname() == "Trolley":
     SERVER = ("Trolley", 54321)
 else:
-    SERVER = ("SCI-STUD-010", 54321)
+    SERVER = ("ICT-F16-019", 54321)
 
-
+# Post container
+# -----------------------------------------------
+# | <Username> <Activity> <Amount> View Profile |
+# | <Body of text>                              |
+# |                                      <Date> |
+# -----------------------------------------------
 class Post:
     def __init__(self, container, username, activity, date, text, user_id, feed_id):
         self.container = container
@@ -38,9 +44,8 @@ class Post:
                                  font=("trebuchet ms", 12, "bold"))
         self.activity_lab = tk.Label(self.frame, text=self.activity, fg="black", bg="white",
                                      font=("trebuchet ms", 12, "bold"))
-        self.profile_button = tk.Button(self.frame, text="View Profile", bd=0, fg="royalblue3", bg="white",
-                                        font=("trebuchet ms", 12, "bold"),
-                                        command=lambda: self.container.load(self.user_id))
+        self.profile_button = tk.Button(self.frame, bd=0, fg="royalblue3", bg="white",
+                                        width=12, font=("trebuchet ms", 12, "bold"))
         self.date_lab = tk.Label(self.frame, text=self.date, fg="black", bg="white",
                                  font=("trebuchet ms", 10), width=18)
         self.text_lab = tk.Label(self.frame, text=self.text, fg="black", bg="white", wrap=480,
@@ -60,6 +65,7 @@ class Post:
                                           fg="red", bg="white")
             self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
 
+        self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
         self.text_lab.grid(column=0, row=1, columnspan=5, sticky="W", padx=(10, 10))
         self.date_lab.grid(column=4, row=2, sticky="E")
 
@@ -78,6 +84,11 @@ class Post:
         del self
 
 
+# Post Popup Dialog
+# What did you do: <dropdown>
+# How much did you do <textentry>
+# How was it <textarea>
+# <Submit>
 class PostDialog:
     def __init__(self, container):
         self.container = container
@@ -157,7 +168,7 @@ class PostDialog:
         if x == "run" or x == "cycle":
             m = "kilometres"
         elif x == "swim":
-            m = "metres"
+            m = "kilometres"
         elif x == "lift":
             m = "kilograms"
         elif x == "code":
@@ -167,7 +178,7 @@ class PostDialog:
         else:
             self.meta_lab.configure(text="No activity selected.")
 
-
+# Search 
 class SearchDialog:
     def __init__(self, container):
         self.container = container
@@ -390,6 +401,82 @@ class Friend:
         del self
 
 
+class StatisticsDialog:
+    def __init__(self, container):
+        self.container = container
+
+        self.options = {
+            "run": "Ran {} kilometres.",
+            "swim": "Swam {} kilometres.",
+            "lift": "Lifted {} kilograms.",
+            "cycle": "Cycled {} kilometres."
+        }
+
+
+        self.top = tk.Toplevel(self.container.app.root, bg="gray90")
+        self.top.title("Statistics")
+        self.top.configure(bg="royalblue2")
+
+        self.selected_opt = tk.StringVar(self.top)
+        self.selected_opt.set("Past week")
+        self.dropdown = OrderedDict([["Past week", "7"],
+                                    ["Past 2 weeks", "14"],
+                                    ["Past month", "31"],
+                                    ["All time", "-1"]])
+        self.top_bar = tk.Frame(self.top, bg="royalblue3")
+        
+        self.username_label = tk.Label(self.top_bar, text="{}'s Statistics Page".format(self.container.app.username), 
+                                       fg="white", bg="royalblue3", font=("trebuchet ms", 14, "bold"), pady=2)
+        self.time_menu = tk.OptionMenu(self.top_bar, self.selected_opt, *self.dropdown.keys())
+
+        self.time_menu.configure(bd=0, bg="royalblue3", fg="white", width=12, relief="flat",
+                                 font=("trebuchet ms", 10, "bold"), activeforeground="white", 
+                                 activebackground="royalblue3")
+        self.time_menu["menu"].config(bd=0, bg="royalblue3", fg="white",
+                                      activeforeground="white", relief="flat",
+                                      font=("trebuchet ms", 10, "bold"))
+
+        self.selected_opt.trace('w', self.get_stuff)
+
+        self.activity_labels = []
+        for x in range(4):
+            self.activity_labels.append(tk.Label(self.top, text="", fg="white", bg="deepskyblue2", 
+                                        font=("trebuchet ms", 12, "bold")))
+        self.draw()
+        self.get_stuff()
+
+    def draw(self):
+        self.top_bar.grid(column=0, row=0)
+        self.username_label.grid(column=0, row=0, padx=20)
+        self.time_menu.grid(column=1, row=0)
+        # drawing of activites done later
+
+    def get_stuff(self, *args):
+        self.clear()
+
+        self.period = self.dropdown[self.selected_opt.get()]
+        self.container.app.out_queue.put("activities|{}|{}".format(self.container.app.id, self.period))
+        result = eval(self.container.app.in_queue.get(True, 4))
+        activities = {}
+        for post in result:
+            if post[0] in activities.keys():
+                activities[post[0]] += int(post[1])
+            else:
+                activities[post[0]] = int(post[1])
+        top4 = list(sorted(activities.items(), key=operator.itemgetter(1)))[-4:]
+        top4.reverse()
+        for row, activity in enumerate(top4):
+            print(activity[0])
+            if activity[0] != "":
+                self.activity_labels[row].configure(text=self.options[activity[0]].format(activity[1]))
+                self.activity_labels[row].grid(column=0, row=row+10, pady=5)
+
+    def clear(self):
+        for lab in self.activity_labels:
+            lab.configure(text="")
+            lab.grid_forget()
+
+
 class App:
     def __init__(self):
         self.root = tk.Tk()
@@ -457,7 +544,6 @@ class App:
 
 class Login:
     admin = False
-
     def __init__(self, app):
         self.app = app
         self.title = tk.Label(text="FitBook", font=("trebuchet ms", 20, "bold"), bg="royalblue3",
@@ -539,7 +625,7 @@ class Login:
                 self.app.out_queue.put("login|{}|{}".format(name, hash))
                 valid = self.app.in_queue.get(True, 5).split("|")
                 if valid[0] == "true":
-                    self.app.id = int(valid[1])
+                    self.app.id = valid[1]
                     Login.admin = bool(int(valid[2]))
                     self.app.username = name
                     # do stuff
@@ -568,7 +654,7 @@ class Main:
         self.app = app
 
         self.page = 1
-        self.current_profile = 0
+        self.current_profile = -1
 
         self.top_bar = tk.Frame(bg="royalblue3")
 
@@ -583,6 +669,9 @@ class Main:
 
         self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2", fg="white", bd=0,
                                      width=8, command=self.friends, font=("trebuchet ms", 12))
+
+        self.stats_but = tk.Button(self.top_bar, text="Statistics", bg="royalblue2", fg="white", bd=0,
+                                   width=10, command=self.stats, font=("trebuchet ms", 12))
 
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
                                      width=3, command=lambda: self.load(self.current_profile),
@@ -609,6 +698,9 @@ class Main:
     def friends(self):
         FriendDialog(self)
 
+    def stats(self):
+        StatisticsDialog(self)
+
     def back(self):
         if self.page > 1:
             self.page -= 1
@@ -627,12 +719,11 @@ class Main:
         self.clear_posts()
         options = {
             "run": "Ran {} kilometres.",
-            "swim": "Swam {} metres.",
+            "swim": "Swam {} kilometres.",
             "lift": "Lifted {} kilograms.",
             "cycle": "Cycled {} kilometres.",
             "code": "Coded {} lines."
         }
-        # load feed
         if id == 0:
             if self.current_profile != 0:
                 self.page = 1
@@ -655,7 +746,6 @@ class Main:
                 self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=id, feed_id=f_id))
                 self.posts[-1].draw(i)
             self.user_but.configure(text="Profile", command=lambda: self.load(self.app.id))
-        # load other page
         else:
             # query server for profile
             if self.current_profile != id:
@@ -698,7 +788,8 @@ class Main:
         self.user_but.configure(text="Profile")
         self.post_but.grid(column=3, row=0, sticky="NS", padx=(5, 5))
         self.search_but.grid(column=2, row=0, sticky="NS", padx=(5, 5))
-        self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 0))
+        self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 5))
+        self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 0))
         self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(240, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
