@@ -209,10 +209,14 @@ class SearchDialog:
                 App.popup("warning", "No response from server, are you connected to the internet?")
             q = 1
             for i, friend in enumerate(self.results[0]):
-                self.results_stuff.append(SearchFrame(self, i + 1, friend[1], friend[0], 1))
+                self.results_stuff.append(SearchFrame(self, i + 1, friend[1], friend[0], 2))
                 self.results_stuff[-1].draw()
                 q += 1
-            for i, user in enumerate(self.results[1]):
+            for i, pending in enumerate(self.results[1]):
+                self.results_stuff.append(SearchFrame(self, q + i + 1, pending[1], pending[0], 1))
+                self.results_stuff[-1].draw()
+                q += 1
+            for i, user in enumerate(self.results[2]):
                 self.results_stuff.append(SearchFrame(self, q + i + 1, user[1], user[0], 0))
                 self.results_stuff[-1].draw()
             print([x.username for x in self.results_stuff])
@@ -224,15 +228,17 @@ class SearchDialog:
 
 
 class SearchFrame:
-    def __init__(self, container, row, username, id, is_friend):
+    def __init__(self, container, row, username, id, friend):
         self.container = container
 
         self.row = row
         self.username = username
         self.id = id
-        self.is_friend = is_friend
-
-        if is_friend or Login.admin:
+        print(friend)
+        if friend == 1:
+            cmd = None
+            text = "Request pending"
+        elif friend == 2 or Login.admin:
             cmd = lambda: self.container.container.load(self.id)
             text = "View profile"
         else:
@@ -387,10 +393,12 @@ class Friend:
     def remove(self):
         self.container.container.app.out_queue.put("remove|{}|{}".format(self.id, self.container.container.app.id))
         self.container.container.app.root.after(1000, self.container.get_stuff)
+        self.container.container.update_notifications()
 
     def accept(self):
         self.container.container.app.out_queue.put("accept|{}|{}".format(self.id, self.container.container.app.id))
         self.container.container.app.root.after(1000, self.container.get_stuff)
+        self.container.container.update_notifications()
 
     def destroy(self):
         self.frame.destroy()
@@ -656,6 +664,7 @@ class Main:
 
         self.page = 1
         self.current_profile = 0
+        self.notifs = 0
 
         self.top_bar = tk.Frame(bg="royalblue3")
 
@@ -669,7 +678,7 @@ class Main:
                                     width=8, command=self.search, font=("trebuchet ms", 12))
 
         self.friends_but = tk.Button(self.top_bar, text="Friends", bg="royalblue2", fg="white", bd=0,
-                                     width=8, command=self.friends, font=("trebuchet ms", 12))
+                                     width=10, command=self.friends, font=("trebuchet ms", 12))
         self.stats_but = tk.Button(self.top_bar, text="Statistics", bg="royalblue2", fg="white", bd=0,
                                    width=10, command=self.stats, font=("trebuchet ms", 12))
         self.delete_but = tk.Button(self.top_bar, text="Delete Account", bg="firebrick3", fg="white", bd=0,
@@ -818,6 +827,8 @@ class Main:
         self.back_but.grid(column=0, row=2, sticky="W")
         self.next_but.grid(column=1, row=2, sticky="E")
 
+        self.update_notifications()
+
         self.app.root.title("{}'s FitBook".format(self.app.username))
 
         self.load()
@@ -831,6 +842,14 @@ class Main:
         self.next_but.grid_forget()
 
         self.app.root.title("FitBook")
+
+    def update_notifications(self):
+        self.app.out_queue.put("pending|{}".format(self.app.id))
+        n = len(eval(self.app.in_queue.get(True, 4)))
+        if n:
+            self.friends_but.configure(text="Friends ({})".format(n))
+        else:
+            self.friends_but.configure(text="Friends")
 
     def clear_posts(self):
         for post in self.posts:

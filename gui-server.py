@@ -181,6 +181,7 @@ def handler(c, a):
                 if split[0] == "search" and len(split) == 3:
                     id = split[1]
                     name = split[2]
+                    # get friends with similar names to term
                     query = """SELECT login.id, username FROM login
                                JOIN friends
                                ON (login.id=friends.id AND friends.friend_id='{1}')
@@ -189,19 +190,31 @@ def handler(c, a):
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     friends = db_out.get(True, 10)
+                    # get all with similar names to term
                     query = """SELECT login.id, username FROM login
                                WHERE username LIKE '%{0}%'
                                AND login.id != '{1}'
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     not_friends = db_out.get(True, 10)
+                    # get pending with similar names to term
+                    query = """SELECT login.id, username FROM login
+                               JOIN friends
+                               ON (login.id=friends.id AND friends.friend_id='{1}')
+                               OR (login.id=friends.friend_id AND friends.id='{1}')
+                               WHERE username LIKE '%{0}%' AND state='waiting'
+                               LIMIT 15""".format(name, id)
+                    db_in.put(query)
+                    pending = db_out.get(True, 10)
                     if len(friends) > 0:
                         not_friends = [x for x in not_friends if x not in friends]
+                    if len(pending) > 0:
+                        not_friends = [x for x in not_friends if x not in pending]
 
-                    print(friends, not_friends)
+                    print(friends, pending, not_friends)
 
-                    if friends or not_friends:
-                        msg = str([set(friends), set(not_friends)][:15])
+                    if friends or pending or not_friends:
+                        msg = str([set(friends), set(pending), set(not_friends)][:15])
                     else:
                         msg = "[[], []]"
 
