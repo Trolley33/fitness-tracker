@@ -16,7 +16,7 @@ global SERVER
 if socket.gethostname() == "Trolley":
     SERVER = ("Trolley", 54321)
 else:
-    SERVER = ("SCI-STUD-010", 54321)
+    SERVER = ("ICT-F16-022", 54321)
 
 
 # Post container
@@ -484,6 +484,72 @@ class StatisticsDialog:
             lab.configure(text="")
             lab.grid_forget()
 
+# Post Popup Dialog
+# What did you do: <dropdown>
+# How much did you do <textentry>
+# How was it <textarea>
+# <Submit>
+
+class AccountDialog:
+    def __init__(self, container):
+        self.container = container
+
+        self.top = tk.Toplevel(self.container.app.root)
+        self.top.title("Tell us about yourself.")
+        self.top.geometry("250x400")
+        self.top.configure(bg="royalblue2")
+
+        self.title_label = tk.Label(self.top, text="Update Your Information", font=("trebuchet ms", 14, "bold"),
+                                fg="white", bg="royalblue2")
+
+        self.h_lab = tk.Label(self.top, text="Height (cm):", font=("trebuchet ms", 12, "bold"),
+                                fg="white", bg="royalblue2")
+        self.w_lab = tk.Label(self.top, text="Weight (kg):", font=("trebuchet ms", 12, "bold"),
+                                 fg="white", bg="royalblue2")
+        self.a_lab = tk.Label(self.top, text="Age:", font=("trebuchet ms", 12, "bold"),
+                                 fg="white", bg="royalblue2")
+
+        self.h = tk.Entry(self.top, font=("trebuchet ms", 11), width=12)
+        self.w = tk.Entry(self.top, font=("trebuchet ms", 11), width=12)
+        self.a = tk.Entry(self.top, font=("trebuchet ms", 11), width=12)
+
+        self.submit_but = tk.Button(self.top, text="Submit", command=self.validate, bg="steelblue2", fg="white",
+                                    bd=0, width=7, font=("trebuchet ms", 12))
+
+        self.draw()
+
+    def draw(self):
+        self.title_label.grid(column=0, row=0, columnspan=3, sticky="NEWS")
+
+        self.h_lab.grid(column=0, row=1, padx=5, sticky="E")
+        self.w_lab.grid(column=0, row=2,  padx=5, sticky="E")
+        self.a_lab.grid(column=0, row=3, padx=5, sticky="E")
+
+        self.h.grid(column=1, row=1, sticky="E")
+        self.w.grid(column=1, row=2, sticky="E")
+        self.a.grid(column=1, row=3, sticky="E")
+
+        self.submit_but.grid(column=1, row=4, sticky="E", padx=0, pady=(5, 0))
+
+    def validate(self):
+        height = self.isfloat(self.h.get())
+        weight = self.isfloat(self.w.get())
+        age = self.isfloat(self.a.get())
+
+        if (height and weight and age):
+            if height < 300 and weight < 250 and age < 150:
+                self.container.app.out_queue.put("info|{}|{}|{}".format(height, weight, age))
+                self.top.destroy()
+                del self
+        else:
+            App.popup("warning", "Drop-down and amount done do not match up.")
+
+    def isfloat(self, x):
+        try:
+            x = float(x)
+            return x
+        except TypeError:
+            return False
 
 class App:
     def __init__(self):
@@ -681,6 +747,8 @@ class Main:
                                      width=10, command=self.friends, font=("trebuchet ms", 12))
         self.stats_but = tk.Button(self.top_bar, text="Statistics", bg="royalblue2", fg="white", bd=0,
                                    width=10, command=self.stats, font=("trebuchet ms", 12))
+        self.acc_but = tk.Button(self.top_bar, text="Account", bg="royalblue2", fg="white", bd=0,
+                                   width=10, command=self.acc, font=("trebuchet ms", 12))
         self.delete_but = tk.Button(self.top_bar, text="Delete Account", bg="firebrick3", fg="white", bd=0,
                                     width=15, command=self.delete_account, font=("trebuchet ms", 12))
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
@@ -710,6 +778,9 @@ class Main:
 
     def stats(self):
         StatisticsDialog(self)
+
+    def acc(self):
+        AccountDialog(self)
 
     def delete_account(self):
         yn = messagebox.askyesno("Confirmation", "Deleting this account will remove it permanently from the server.\n"
@@ -746,7 +817,7 @@ class Main:
         # load feed
         if id == 0:
             self.delete_but.grid_forget()
-            self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(235, 5))
+            self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(156, 5))
             if self.current_profile != 0:
                 self.page = 1
             self.app.out_queue.put("feed|{}|{}".format(self.app.id, self.page * 5))
@@ -779,7 +850,7 @@ class Main:
             self.app.out_queue.put("profile|{}|{}|{}|{}".format(id, self.app.id, self.page * 5, flag))
             self.current_profile = id
             if Login.admin or self.current_profile == self.app.id:
-                self.delete_but.grid(column=98, row=0, sticky="NS", padx=(84, 5))
+                self.delete_but.grid(column=98, row=0, sticky="NS", padx=(5, 5))
                 self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(5, 5))
             prof = self.app.in_queue.get(True, 2)
             prof = eval(prof)
@@ -819,7 +890,8 @@ class Main:
         self.search_but.grid(column=2, row=0, sticky="NS", padx=(5, 5))
         self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 5))
         self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 5))
-        self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(235, 5))
+        self.acc_but.grid(column=6, row=0, sticky="NS", padx=(5, 5))
+        self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(200, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
         self.page_frame.grid(column=0, row=1, columnspan=2)
