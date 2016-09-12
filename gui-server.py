@@ -164,6 +164,9 @@ def handler(c, a):
                                 "datetime('now', 'localtime'))".format(result[0][0])
                         db_in.put(query)
                         db_out.get()
+                        query = "INSERT INTO info (id) VALUES ('{}')".format(result[0][0])
+                        db_in.put(query)
+                        db_out.get()
                         msg = "true"
 
                 if split[0] == "new" and len(split) == 5:
@@ -321,6 +324,16 @@ def handler(c, a):
                         print(result)
                     else:
                         msg = "[]"
+                if split[0] == "info" and len(split) == 5:
+                    id = split[1]
+                    height = split[2]
+                    weight = split[3]
+                    age = split[4]
+                    query = """UPDATE info
+                               SET height='{}',weight='{}',age='{}'
+                               WHERE id='{}'""".format(height, weight, age, id)
+                    db_in.put(query)
+                    db_out.get()
 
                 if msg:
                     print("* sending:", msg)
