@@ -16,7 +16,7 @@ global SERVER
 if socket.gethostname() == "Trolley33":
     SERVER = ("Trolley33", 54321)
 else:
-    SERVER = ("ICT-F16-022", 54321)
+    SERVER = ("ICT-F16-020", 54321)
 
 
 # Post container
@@ -496,8 +496,8 @@ class AccountDialog:
 
         self.top = tk.Toplevel(self.container.app.root)
         self.top.title("Tell us about yourself.")
-        self.top.geometry("250x400")
         self.top.configure(bg="royalblue2")
+        self.top.resizable(0,0)
 
         self.title_label = tk.Label(self.top, text="Update Your Information", font=("trebuchet ms", 14, "bold"),
                                 fg="white", bg="royalblue2")
@@ -519,7 +519,7 @@ class AccountDialog:
         self.draw()
 
     def draw(self):
-        self.title_label.grid(column=0, row=0, columnspan=3, sticky="NEWS")
+        self.title_label.grid(column=0, row=0, columnspan=3, sticky="NEWS", padx=(0,5))
 
         self.h_lab.grid(column=0, row=1, padx=5, sticky="E")
         self.w_lab.grid(column=0, row=2,  padx=5, sticky="E")
@@ -529,7 +529,7 @@ class AccountDialog:
         self.w.grid(column=1, row=2, sticky="E")
         self.a.grid(column=1, row=3, sticky="E")
 
-        self.submit_but.grid(column=1, row=4, sticky="E", padx=0, pady=(5, 0))
+        self.submit_but.grid(column=1, row=4, sticky="E", padx=0, pady=(5, 5))
 
     def validate(self):
         height = self.isfloat(self.h.get())
@@ -537,12 +537,14 @@ class AccountDialog:
         age = self.isfloat(self.a.get())
 
         if (height and weight and age):
-            if height < 300 and weight < 250 and age < 150:
-                self.container.app.out_queue.put("info|{}|{}|{}".format(height, weight, age))
+            if 0 < height < 300 and 0< weight < 250 and 0 < age < 150:
+                self.container.app.out_queue.put("info|{}|{}|{}|{}".format(self.container.app.id, height, weight, age))
                 self.top.destroy()
                 del self
+            else:
+                App.popup("warning", "One or more of the details you have submitted are invalid, please ensure your details are correctly entered.")
         else:
-            App.popup("warning", "Drop-down and amount done do not match up.")
+            App.popup("warning", "One or more entries have been left blank, all are required to update info.")
 
     def isfloat(self, x):
         try:
