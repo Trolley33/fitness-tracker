@@ -334,7 +334,16 @@ def handler(c, a):
                                WHERE id='{}'""".format(height, weight, age, id)
                     db_in.put(query)
                     db_out.get()
-
+                if split[0] == "getinfo" and len(split) == 2:
+                    id = split[1]
+                    query = """SELECT height, weight, age FROM info
+                               WHERE id='{}'""".format(id)
+                    db_in.put(query)
+                    result = db_out.get()
+                    if result:
+                        msg = str(result)
+                    else:
+                        msg = "[]"
                 if msg:
                     print("* sending:", msg)
                     c.send(msg.encode())
