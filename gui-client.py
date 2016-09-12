@@ -119,7 +119,7 @@ class PostDialog:
 
         self.menu = tk.OptionMenu(self.top, self.selected_opt, *self.options.keys())
 
-        self.menu.configure(bd=0, bg="royalblue2", fg="white", width=10, relief="flat",
+        self.menu.configure(bd=0, bg="royalblue2", fg="white", relief="flat",
                             activeforeground="white", activebackground="royalblue2")
         self.menu["menu"].config(bd=0, bg="royalblue2", fg="white",
                                  activeforeground="white", relief="flat")
@@ -415,7 +415,7 @@ class StatisticsDialog:
 
         self.options = {
             "run": "Ran {} kilometres.",
-            "swim": "Swam {} kilometres.",
+            "swim": "Swam {} metres.",
             "lift": "Lifted {} kilograms.",
             "cycle": "Cycled {} kilometres."
         }
@@ -434,6 +434,8 @@ class StatisticsDialog:
 
         self.username_label = tk.Label(self.top_bar, text="{}'s Statistics Page".format(self.container.app.username),
                                        fg="white", bg="royalblue3", font=("trebuchet ms", 14, "bold"), pady=2)
+        self.calories_label = tk.Label(self.top, text="", fg="white", bg="royalblue2", font=("trebuchet ms", 10, 
+                                       "bold"))
         self.time_menu = tk.OptionMenu(self.top_bar, self.selected_opt, *self.dropdown.keys())
 
         self.time_menu.configure(bd=0, bg="royalblue3", fg="white", width=12, relief="flat",
@@ -444,6 +446,8 @@ class StatisticsDialog:
                                       font=("trebuchet ms", 10, "bold"))
 
         self.selected_opt.trace('w', self.get_stuff)
+        
+  
 
         self.activity_labels = []
         for x in range(4):
@@ -473,11 +477,32 @@ class StatisticsDialog:
             stuff_done += int(post[1])
         top4 = list(sorted(activities.items(), key=operator.itemgetter(1)))[-4:]
         top4.reverse()
+        r = 10
         for row, activity in enumerate(top4):
             if activity[0] != "":
                 self.activity_labels[row].configure(text=self.options[activity[0]].format(activity[1]),
-                                                    width=int(activity[1] / stuff_done * 20) + 18)
+                                                    width=int(activity[1] / stuff_done * 20) + 22)
                 self.activity_labels[row].grid(column=0, row=row + 10, pady=5)
+                r += 1
+        self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
+        info = eval(self.container.app.in_queue.get(True, 4))[0]
+        if int(info[0]) == 0:
+            info = (177.0, 76.0)
+        calories = 0
+        for row, activity in enumerate(top4):
+            if activity[0] != "":
+            # first number = calories burned per x on average, multplied by percent of average weight and height
+                if activity[0] == "run":
+                    calories += (78 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
+                elif activity[0] == "swim":
+                    calories += (0.25 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
+                elif activity[0] == "lift":
+                    calories += (0.239 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
+                elif activity[0] == "cycle":
+                    calories += (37 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
+        self.calories_label.configure(text="{} calories burned doing these activities.".format(round(calories)))
+        self.calories_label.grid(column=0, row=r)
+        
 
     def clear(self):
         for lab in self.activity_labels:
@@ -515,8 +540,9 @@ class AccountDialog:
 
         self.submit_but = tk.Button(self.top, text="Submit", command=self.validate, bg="steelblue2", fg="white",
                                     bd=0, width=7, font=("trebuchet ms", 12))
-
+        self.get_stuff()
         self.draw()
+
 
     def draw(self):
         self.title_label.grid(column=0, row=0, columnspan=3, sticky="NEWS", padx=(0,5))
@@ -552,6 +578,13 @@ class AccountDialog:
             return x
         except TypeError:
             return False
+            
+    def get_stuff(self):
+        self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
+        info = eval(self.container.app.in_queue.get())
+        self.h.insert('end', info[0][0])
+        self.w.insert('end', info[0][1])
+        self.a.insert('end', info[0][2])
 
 class App:
     def __init__(self):
