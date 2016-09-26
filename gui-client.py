@@ -13,8 +13,8 @@ from tkinter import messagebox
 # the master server's IP, set as programmer
 global SERVER
 
-if socket.gethostname() == "Trolley":
-    SERVER = ("Trolley", 54321)
+if socket.gethostname() == "Trolley33":
+    SERVER = ("Trolley33", 54321)
 else:
     SERVER = ("ICT-F16-020", 54321)
 
@@ -108,8 +108,7 @@ class PostDialog:
                                     ["Running", "run"],
                                     ["Swimming", "swim"],
                                     ["Weightlifting", "lift"],
-                                    ["Cycling", "cycle"],
-                                    ["Push ups", "push"]])
+                                    ["Cycling", "cycle"]])
 
         self.act_lab = tk.Label(self.top, text="What did you do today?", font=("trebuchet ms", 12, "bold"),
                                 fg="white", bg="royalblue2")
@@ -155,7 +154,7 @@ class PostDialog:
         meta = self.meta.get()
         post = self.text.get('1.0', 'end')
 
-        if (activity != "Nothing" and meta.isdigit()) or (activity == "Nothing" and meta == ''):
+        if (activity != "Nothing" and meta.isdigit()) or (activity == "Nothing" and meta == '' and post != ''):
             self.container.submit(self.options[activity], meta, post)
             self.top.destroy()
             del self
@@ -174,9 +173,6 @@ class PostDialog:
             m = "metres"
         elif x == "lift":
             m = "kilograms"
-        elif x == "push":
-            m = "push ups"
-            x = "do"
         if x and m:
             self.meta_lab.configure(text="How many {} did you {}?".format(m, x))
         else:
@@ -421,8 +417,7 @@ class StatisticsDialog:
             "run": "Ran {} kilometres.",
             "swim": "Swam {} metres.",
             "lift": "Lifted {} kilograms.",
-            "cycle": "Cycled {} kilometres.",
-            "push": "Did {} push ups."
+            "cycle": "Cycled {} kilometres."
         }
 
         self.top = tk.Toplevel(self.container.app.root, bg="gray90")
@@ -439,7 +434,7 @@ class StatisticsDialog:
 
         self.username_label = tk.Label(self.top_bar, text="{}'s Statistics Page".format(self.container.app.username),
                                        fg="white", bg="royalblue3", font=("trebuchet ms", 14, "bold"), pady=2)
-        self.calories_label = tk.Label(self.top, text="", fg="white", bg="royalblue2", font=("trebuchet ms", 10,
+        self.calories_label = tk.Label(self.top, text="", fg="white", bg="royalblue2", font=("trebuchet ms", 10, 
                                        "bold"))
         self.time_menu = tk.OptionMenu(self.top_bar, self.selected_opt, *self.dropdown.keys())
 
@@ -451,8 +446,8 @@ class StatisticsDialog:
                                       font=("trebuchet ms", 10, "bold"))
 
         self.selected_opt.trace('w', self.get_stuff)
-
-
+        
+  
 
         self.activity_labels = []
         for x in range(4):
@@ -486,7 +481,7 @@ class StatisticsDialog:
         for row, activity in enumerate(top4):
             if activity[0] != "":
                 self.activity_labels[row].configure(text=self.options[activity[0]].format(activity[1]),
-                                                    width=int(activity[1] / stuff_done * 20) + 20)
+                                                    width=int(activity[1] / stuff_done * 20) + 22)
                 self.activity_labels[row].grid(column=0, row=row + 10, pady=5)
                 r += 1
         self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
@@ -505,11 +500,9 @@ class StatisticsDialog:
                     calories += (0.239 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
                 elif activity[0] == "cycle":
                     calories += (37 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
-                elif activity[0] == "push":
-                    calories += (0.75 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
         self.calories_label.configure(text="{} calories burned doing these activities.".format(round(calories)))
         self.calories_label.grid(column=0, row=r)
-
+        
 
     def clear(self):
         for lab in self.activity_labels:
@@ -585,7 +578,7 @@ class AccountDialog:
             return x
         except TypeError:
             return False
-
+            
     def get_stuff(self):
         self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
         info = eval(self.container.app.in_queue.get())
@@ -686,8 +679,6 @@ class Login:
     def draw(self):
         self.app.root.configure(bg="royalblue2")
 
-        self.app.root.bind("<Return>", self.press_enter)
-
         self.title.grid(column=0, row=0, sticky="NEWS")
 
         self.main_frame.grid(column=0, row=1, padx=20, pady=(4, 8))
@@ -696,7 +687,6 @@ class Login:
         # in frame
         self.user_lab.grid(column=0, row=0, padx=(0, 4))
         self.user_entry.grid(column=1, row=0)
-        self.user_entry.focus_set()
         self.pass_lab.grid(column=0, row=1, padx=(0, 4))
         self.pass_entry.grid(column=1, row=1)
 
@@ -705,8 +695,6 @@ class Login:
 
     def undraw(self):
         self.title.grid_forget()
-
-        self.app.root.unbind("<Return>")
 
         self.main_frame.grid_forget()
 
@@ -723,9 +711,6 @@ class Login:
         self.user_entry.delete(0, 'end')
         self.pass_entry.delete(0, 'end')
 
-    def press_enter(self, event=None):
-        self.login()
-
     def signup(self):
         name = self.user_entry.get()
         passw = self.pass_entry.get()
@@ -738,9 +723,6 @@ class Login:
                 App.popup("info", "Successfully signed up.")
             elif success == "false":
                 App.popup("info", "An account with that username already exists.")
-                self.user_entry.delete(0, 'end')
-                self.pass_entry.delete(0, 'end')
-                self.user_entry.focus_set()
 
     def login(self):
         name = self.user_entry.get()
@@ -763,7 +745,6 @@ class Login:
                     App.popup("info", "Invalid login credentials.")
                     self.user_entry.delete(0, 'end')
                     self.pass_entry.delete(0, 'end')
-                    self.user_entry.focus_set()
 
             except queue.Empty as e:
                 App.popup("warning", "Could not establish a connection with server.")
@@ -866,8 +847,7 @@ class Main:
             "run": "Ran {} kilometres.",
             "swim": "Swam {} metres.",
             "lift": "Lifted {} kilograms.",
-            "cycle": "Cycled {} kilometres.",
-            "push": "Did {} push ups."
+            "cycle": "Cycled {} kilometres."
         }
         # load feed
         if id == 0:
