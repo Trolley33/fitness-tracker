@@ -12,9 +12,10 @@ from tkinter import messagebox
 
 # the master server's IP, set as programmer
 global SERVER
-
+# if my PC, automatically connect to self
 if socket.gethostname() == "Trolley33":
     SERVER = ("Trolley33", 54321)
+# otherwise connect to supplied address
 else:
     SERVER = ("ICT-F16-020", 54321)
 
@@ -27,13 +28,9 @@ else:
 # -----------------------------------------------
 class Post:
     def __init__(self, container, username, activity, date, text, user_id, feed_id):
+        # Initialise class variables.
         self.container = container
-        self.page_f = container.page_frame
-
-        self.frame = tk.Frame(self.page_f, bg="white", width=20, bd=2, relief="groove", padx=4)
-        self.frame.columnconfigure(0, minsize=150)
-        self.frame.columnconfigure(1, minsize=200)
-
+        self.page_f = container.page_frame # 
         self.username = username
         self.activity = activity
         self.date = date
@@ -41,6 +38,13 @@ class Post:
         self.user_id = user_id
         self.feed_id = feed_id
 
+        # Create main frame to contain other content.
+        self.frame = tk.Frame(self.page_f, bg="white", width=20, bd=2, relief="groove", padx=4)
+        # Make post a set width
+        self.frame.columnconfigure(0, minsize=150)
+        self.frame.columnconfigure(1, minsize=200)
+
+        # Set up all labels.
         self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
         self.activity_lab = tk.Label(self.frame, text=self.activity, fg="black", bg="white",
@@ -54,14 +58,16 @@ class Post:
                                  font=("trebuchet ms", 10), justify="left")
 
     def draw(self, row):
+        """Draw current post at row."""
         self.frame.grid(column=0, row=row, pady=(5, 5), sticky="WE")
-
         self.user_lab.grid(column=0, row=0, sticky="W", padx=5)
         self.activity_lab.grid(column=1, row=0, sticky="W", padx=5)
+        # If post is on main feed draw regularly.
         if self.user_id > 0:
             self.profile_button.configure(command=lambda: self.container.load(self.user_id), text="View Profile", bd=0,
                                           fg="royalblue3", bg="white")
             self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
+        # If user is on a profile, and owns profile, or is admin.
         elif (self.user_id < 0 and abs(self.user_id) == self.container.app.id) or Login.admin:
             self.profile_button.configure(command=self.remove_post, text="Delete Post", bd=0,
                                           fg="firebrick3", bg="white")
@@ -71,17 +77,22 @@ class Post:
         self.date_lab.grid(column=4, row=2, sticky="E")
 
     def remove_post(self):
+        """Remove post from server database."""
+        # If admin or user requests removal of a post, send request and refresh page.
         self.container.app.out_queue.put("deletepost|{}".format(self.feed_id))
         self.container.load(self.container.current_profile)
 
+    # Whenever new posts are loaded completely remove widgets from memory as they most likely won't be needed any more.
     def delete(self):
+        """Remove post from memory and feed."""
+        # Destroy all tkinter widgets.
         self.frame.destroy()
-
         self.user_lab.destroy()
         self.activity_lab.destroy()
         self.profile_button.destroy()
         self.text_lab.destroy()
         self.date_lab.destroy()
+        # Delete this object from memory.
         del self
 
 
@@ -90,53 +101,55 @@ class Post:
 # How much did you do <textentry>
 # How was it <textarea>
 # <Submit>
-
-
 class PostDialog:
     def __init__(self, container):
+        # Initialise place where dialog is initiated.
         self.container = container
-
+        # Create popup window and set parameters.
         self.top = tk.Toplevel(self.container.app.root)
         self.top.title("Share Your Experiences!")
         self.top.geometry("640x208")
         self.top.configure(bg="royalblue2")
         self.top.columnconfigure(0, minsize=320)
-
+        # Set up variables for dropdown box.
         self.selected_opt = tk.StringVar(self.top)
         self.selected_opt.set("Nothing")
+        # Link display words to keywords.
         self.options = OrderedDict([["Nothing", ""],
                                     ["Running", "run"],
                                     ["Swimming", "swim"],
                                     ["Weightlifting", "lift"],
-                                    ["Cycling", "cycle"]])
-
+                                    ["Cycling", "cycle"],
+                                    ["Push ups", "push"]])
+        # Question labels.
         self.act_lab = tk.Label(self.top, text="What did you do today?", font=("trebuchet ms", 12, "bold"),
                                 fg="white", bg="royalblue2")
         self.meta_lab = tk.Label(self.top, text="No activity selected.", font=("trebuchet ms", 12, "bold"),
                                  fg="white", bg="royalblue2")
         self.text_lab = tk.Label(self.top, text="How was it?", font=("trebuchet ms", 12, "bold"),
                                  fg="white", bg="royalblue2")
-
+        # Dropdown box.
         self.menu = tk.OptionMenu(self.top, self.selected_opt, *self.options.keys())
-
+        # Fixing aesthetics.
         self.menu.configure(bd=0, bg="royalblue2", fg="white", relief="flat",
                             activeforeground="white", activebackground="royalblue2")
         self.menu["menu"].config(bd=0, bg="royalblue2", fg="white",
                                  activeforeground="white", relief="flat")
-
+        # Entry boxes.
         self.meta = tk.Entry(self.top, font=("trebuchet ms", 11), width=10)
         self.text = tk.Text(self.top, width=35, height=3, wrap='word', font=("trebuchet ms", 11))
-
+        # When dropdown is changed, update question text.
         self.selected_opt.trace('w', self.update_text)
-
+        # Add scrollbar to text box.
         self.scroll_bar = tk.Scrollbar(self.top, command=self.text.yview)
         self.text['yscrollcommand'] = self.scroll_bar.set
+        # Submit post to server.
         self.submit_but = tk.Button(self.top, text="Submit", command=self.validate, bg="steelblue2", fg="white",
                                     bd=0, width=7, font=("trebuchet ms", 12))
-
         self.draw()
 
     def draw(self):
+        """Add all widgets to window."""
         self.act_lab.grid(column=0, row=0, pady=(12, 0), padx=5, sticky="E")
         self.meta_lab.grid(column=0, row=1, pady=(12, 0), padx=5, sticky="E")
         self.text_lab.grid(column=0, row=2, pady=(12, 0), padx=5, sticky="E")
@@ -150,19 +163,25 @@ class PostDialog:
         self.submit_but.grid(column=1, row=3, columnspan=3, sticky="E", padx=16, pady=(5, 0))
 
     def validate(self):
+        """Check user entry before submitting."""
         activity = self.selected_opt.get()
         meta = self.meta.get()
         post = self.text.get('1.0', 'end')
-
+        # If either: activity is something, and amount done is a number; or activity is not set, and no data is entered
+        # but something has to be in the post box.
         if (activity != "Nothing" and meta.isdigit()) or (activity == "Nothing" and meta == '' and post != ''):
             self.container.submit(self.options[activity], meta, post)
+            # After submitting post, close popup window.
             self.top.destroy()
             del self
+        # If entered options are invalid alert user.
         else:
             App.popup("warning", "Drop-down and amount done do not match up.")
 
     def update_text(self, *args):
+        """Change question based on context of dropdown."""
         act = self.selected_opt.get()
+        # x = amount, m = activity done.
         x = ""
         m = ""
         if act in self.options.keys():
@@ -173,14 +192,21 @@ class PostDialog:
             m = "metres"
         elif x == "lift":
             m = "kilograms"
+        elif x == "push":
+            x = "do"
+            m = "push-ups"
         if x and m:
             self.meta_lab.configure(text="How many {} did you {}?".format(m, x))
         else:
             self.meta_lab.configure(text="No activity selected.")
 
-
+# <Entry box> [Search]
+# <friend1> [view profile]
+# <friend2> [view profile]
+# <non-friend> [send friend request]
 class SearchDialog:
     def __init__(self, container):
+        # Initialise place where dialog is initiated.
         self.container = container
 
         self.top = tk.Toplevel(self.container.app.root)
@@ -417,7 +443,8 @@ class StatisticsDialog:
             "run": "Ran {} kilometres.",
             "swim": "Swam {} metres.",
             "lift": "Lifted {} kilograms.",
-            "cycle": "Cycled {} kilometres."
+            "cycle": "Cycled {} kilometres.",
+            "push": "Did {} push-ups."
         }
 
         self.top = tk.Toplevel(self.container.app.root, bg="gray90")
@@ -500,6 +527,8 @@ class StatisticsDialog:
                     calories += (0.239 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
                 elif activity[0] == "cycle":
                     calories += (37 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
+                elif activity[0] == "push":
+                    calories += (0.75 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
         self.calories_label.configure(text="{} calories burned doing these activities.".format(round(calories)))
         self.calories_label.grid(column=0, row=r)
         
@@ -847,7 +876,8 @@ class Main:
             "run": "Ran {} kilometres.",
             "swim": "Swam {} metres.",
             "lift": "Lifted {} kilograms.",
-            "cycle": "Cycled {} kilometres."
+            "cycle": "Cycled {} kilometres.",
+            "push": "Did {} push-ups."
         }
         # load feed
         if id == 0:
