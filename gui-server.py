@@ -6,57 +6,70 @@ import threading
 
 
 def db_handler(db_name):
+    """Open supplied database and execute commands supplied by queue."""
     db = sqlite3.connect(db_name)
     while 1:
         try:
+            # If any data is in the in queue.
             if not db_in.empty():
+                # Execute query and retrieve rows.
                 y = db_in.get()
                 x = db.execute(y).fetchall()
-                db.commit()
+                db.commit()  # save changes.
+                # If a result is returned output it.
                 if x:
                     db_out.put(x)
+                # Otherwise ouput blank string so system does not hang.
                 else:
                     db_out.put("")
+        # If error occurs, print the exception and safely exit the database.
         except Exception as e:
             print(e)
             break
     db.close()
 
+# Define variables for later use.
 db_in = queue.Queue()
 db_out = queue.Queue()
 
+# Start database handler as daemon thread, so it is automatically killed when main app is closed, and to allow it to run parallel to the server.
 d = threading.Thread(target=db_handler, args=("db/db.db",))
 d.setDaemon(True)
 d.start()
 
-# setup
+# Setup server.
 s = socket.socket()
 
 server = (socket.gethostname(), 54321)
 
-# create
+# Start server with 10 open slots.
 s.bind(server)
 
 s.listen(10)
 
 
 def scrub(text):
+    """Takes a string and makes it suitable for SQL execution.
+    Replaces 's with ''s (single quotes with double quotes) to stop SQL injection."""
     return text.replace("'", "''")
 
 
 def handler(c, a):
+    """Receives data from clients and executes SQL statements based on requests."""
     while 1:
         try:
+            # If there is some data waiting to be received.
             ready = select.select([c], [], [], 0.25)
             if ready[0]:
+                # Receive data and make it usable.
                 reply = c.recv(1024)
                 reply = scrub(reply.decode())
-                if not reply:
-                    break
+                # Log communication in console.
                 print('* received:', reply)
+                # Decode message into [command, and *arguments]
                 split = reply.split("|")
-                # load|who|username|activities|timespan
                 msg = ''
+                # profile|friend_id|user_id|is_admin_flag|period
                 if split[0] == "profile" and len(split) >= 3:
                     friend_id = split[1]
                     user_id = split[2]
@@ -70,8 +83,11 @@ def handler(c, a):
                         result = db_out.get(True, 10)
                     else:
                         result = True
+                    # If users are friends or user is admin.
                     if result:
+                        # Posts go from 1-6 for 5 posts.
                         max = 6
+                        # If user sends a different time period for posts allow it.
                         if len(split) >= 4:
                             max = int(split[3])
                         query = ("""SELECT login.username, feed.activity, feed.metadata, feed.date, feed.text, feed.feed_id
@@ -88,7 +104,9 @@ def handler(c, a):
                         else:
                             msg = "[]"
                     else:
-                        print("not friends youth")
+                        print("users not friends.")
+                        msg = "invalid"
+                # feed|user_id|period
                 if split[0] == "feed" and len(split) >= 2:
                     user_id = split[1]
                     max = 6

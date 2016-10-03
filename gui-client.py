@@ -267,9 +267,9 @@ class SearchDialog:
 # <name> <button>
 class SearchFrame:
     def __init__(self, container, row, username, id, friend):
-        # Initiliase place where frame is created.
+        # Initiliase class variables.
         self.container = container
-        # and other variables.
+
         self.row = row
         self.username = username
         self.id = id
@@ -360,6 +360,7 @@ class FriendDialog:
         self.clear()
         # Empty lists.
         pending, current = [], []
+        # Get data from server and turn it into lists (eval).
         try:
             pending = eval(self.container.app.in_queue.get(True, 4))
         except queue.Empty:
@@ -370,28 +371,29 @@ class FriendDialog:
             current = eval(self.container.app.in_queue.get(True, 4))
         except queue.Empty:
             App.popup("warning", "No response from server, are you connected to the internet?")
-
+        # Loop through pending friends and create rows for each.
         for i, p in enumerate(pending):
             u = p[0]
             id = p[1]
             self.pending.append(Friend(self, i, u, id, 0, self.left))
+        # Loop through current friends and create rows for each.
         for i, p in enumerate(current):
             u = p[0]
             id = p[1]
             self.current.append(Friend(self, i, u, id, 1, self.right))
+        # If either list is empty, display nothing here.
         if not self.pending:
             self.pending.append(Friend(self, 0, "Nothing here!", -1, -1, self.left))
-
         if not self.current:
             self.current.append(Friend(self, 0, "Nothing here!", -1, -1, self.right))
-
+        # Loop through both lists and draw the widgets to screen.
         for i, p in enumerate(self.pending):
             p.draw()
-
         for i, c in enumerate(self.current):
             c.draw()
 
     def clear(self):
+        """Remove all of the GUI elements from memory."""
         for p in self.pending + self.current:
             p.destroy()
         self.pending = []
@@ -400,17 +402,18 @@ class FriendDialog:
 
 class Friend:
     def __init__(self, container, row, username, id, is_friend, frame):
+        # Initiliase class variables.
         self.container = container
 
         self.row = row
         self.username = username
         self.id = id
         self.is_friend = is_friend
-
+        # Configure how frame looks.
         self.frame = tk.Frame(frame, bg="white", bd=2, relief="groove")
         self.frame.columnconfigure(0, minsize=120)
         self.frame.columnconfigure(1, minsize=120)
-
+        # Set button to contextual command.
         if is_friend:
             cmd = self.remove
             text = "Remove Friend"
@@ -419,12 +422,12 @@ class Friend:
             text = "Accept Request"
 
         self.button_draw = True
-
+        # Used for 'Nothing Here!' label case (no button.)
         if not id or is_friend == -1:
             self.button_draw = False
             self.frame.columnconfigure(0, minsize=0)
             self.frame.columnconfigure(1, minsize=0)
-
+        # Initiliase labels.
         self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
 
@@ -433,6 +436,7 @@ class Friend:
                                         command=cmd)
 
     def draw(self):
+        """Add widgets to this frame."""
         self.frame.grid(column=0, row=self.row, pady=(5, 5), sticky="NSWE", columnspan=2)
 
         self.user_lab.grid(column=0, row=0, sticky="W")
@@ -440,16 +444,19 @@ class Friend:
             self.profile_button.grid(column=4, row=0, sticky="E")
 
     def remove(self):
+        """Request removal of friend from friends."""
         self.container.container.app.out_queue.put("remove|{}|{}".format(self.id, self.container.container.app.id))
         self.container.container.app.root.after(1000, self.container.get_stuff)
         self.container.container.update_notifications()
 
     def accept(self):
+        """Accept friend request."""
         self.container.container.app.out_queue.put("accept|{}|{}".format(self.id, self.container.container.app.id))
         self.container.container.app.root.after(1000, self.container.get_stuff)
         self.container.container.update_notifications()
 
     def destroy(self):
+        """Remove this class and GUI from memory."""
         self.frame.destroy()
 
         self.user_lab.destroy()
@@ -460,8 +467,9 @@ class Friend:
 
 class StatisticsDialog:
     def __init__(self, container):
+        # Initiliase class variable.
         self.container = container
-
+        # Translate stored activity to regular sentences.
         self.options = {
             "run": "Ran {} kilometres.",
             "swim": "Swam {} metres.",
@@ -469,11 +477,11 @@ class StatisticsDialog:
             "cycle": "Cycled {} kilometres.",
             "push": "Did {} push-ups."
         }
-
+        # Create popup window.
         self.top = tk.Toplevel(self.container.app.root, bg="gray90")
         self.top.title("Statistics")
         self.top.configure(bg="royalblue2")
-
+        # Configure drop-down box settings.
         self.selected_opt = tk.StringVar(self.top)
         self.selected_opt.set("Past week")
         self.dropdown = OrderedDict([["Past week", "7"],
@@ -481,7 +489,7 @@ class StatisticsDialog:
                                      ["Past month", "31"],
                                      ["All time", "-1"]])
         self.top_bar = tk.Frame(self.top, bg="royalblue3")
-
+        # Initiliase labels and menu.
         self.username_label = tk.Label(self.top_bar, text="{}'s Statistics Page".format(self.container.app.username),
                                        fg="white", bg="royalblue3", font=("trebuchet ms", 14, "bold"), pady=2)
         self.calories_label = tk.Label(self.top, text="", fg="white", bg="royalblue2", font=("trebuchet ms", 10, 
@@ -498,7 +506,7 @@ class StatisticsDialog:
         self.selected_opt.trace('w', self.get_stuff)
         
   
-
+        # Create 4 base labels to populate rather than create and remove temporary ones.
         self.activity_labels = []
         for x in range(4):
             self.activity_labels.append(tk.Label(self.top, text="", fg="white", bg="deepskyblue2",
@@ -507,17 +515,21 @@ class StatisticsDialog:
         self.get_stuff()
 
     def draw(self):
+        """Add basic widgets to this window."""
         self.top_bar.grid(column=0, row=0)
         self.username_label.grid(column=0, row=0, padx=20)
         self.time_menu.grid(column=1, row=0)
-        # drawing of activites done later
+        # drawing of activites done later.
 
     def get_stuff(self, *args):
+        """Retrieve data from server, organise, and display."""
         self.clear()
-        stuff_done = 0
+        stuff_done = 0  # Used to work out relative width of each row.
         self.period = self.dropdown[self.selected_opt.get()]
+        # Send request and evaluate the result.
         self.container.app.out_queue.put("activities|{}|{}".format(self.container.app.id, self.period))
         result = eval(self.container.app.in_queue.get(True, 4))
+        # Loop through all posts and calculate total of each activity done.
         activities = {}
         for post in result:
             if post[0] in activities.keys():
@@ -525,23 +537,28 @@ class StatisticsDialog:
             else:
                 activities[post[0]] = int(post[1])
             stuff_done += int(post[1])
+        # Sort activities by amount done, and get last 4 from list (highest).
         top4 = list(sorted(activities.items(), key=operator.itemgetter(1)))[-4:]
         top4.reverse()
-        r = 10
+        r = 10  # keeps track of bottom of list
+        # Loop through top 4 activities and display them appropriately. 
         for row, activity in enumerate(top4):
             if activity[0] != "":
                 self.activity_labels[row].configure(text=self.options[activity[0]].format(activity[1]),
                                                     width=int(activity[1] / stuff_done * 20) + 22)
                 self.activity_labels[row].grid(column=0, row=row + 10, pady=5)
                 r += 1
+        # Attempt to retrieve personal info on user.
         self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
         info = eval(self.container.app.in_queue.get(True, 4))[0]
+        # If the info is not set, assume average height and weight.
         if int(info[0]) == 0:
             info = (177.0, 76.0)
         calories = 0
+        # Loop through top 4 activities and estimate number of calories burned.
         for row, activity in enumerate(top4):
             if activity[0] != "":
-            # first number = calories burned per x on average, multplied by percent of average weight and height
+            # first number = calories burned per x on average, which is multplied by percent of average weight and height
                 if activity[0] == "run":
                     calories += (78 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
                 elif activity[0] == "swim":
@@ -557,6 +574,7 @@ class StatisticsDialog:
         
 
     def clear(self):
+        """Wipe labels in this class but keep them in memory."""
         for lab in self.activity_labels:
             lab.configure(text="")
             lab.grid_forget()
