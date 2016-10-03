@@ -208,59 +208,74 @@ class SearchDialog:
     def __init__(self, container):
         # Initialise place where dialog is initiated.
         self.container = container
-
+        # Create popup window and change title of window.
         self.top = tk.Toplevel(self.container.app.root)
         self.top.title("Search for Friends!")
-
+        # Create search entry box and button.
         self.search_bar = tk.Entry(self.top)
         self.search_but = tk.Button(self.top, text="Search", command=self.search)
-
+        # Initiliase where the search info and GUI elements will be stored.
         self.results = []
         self.results_stuff = []
 
         self.draw()
 
     def draw(self):
+        """Add widgets to window."""
         self.search_bar.grid(column=0, row=0, sticky="NESW")
         self.search_but.grid(column=1, row=0, sticky="W")
 
     def search(self):
+        """Search database for similar terms to ones in entry."""
+        # Retrieve search term from entry and clear it.
         term = self.search_bar.get()
         self.clear()
+        # If the entry bar has something it in.
         if term:
+            # Send request for data to server.
             self.container.app.out_queue.put("search|{}|{}".format(self.container.app.id, term))
+            # If client receives a response, set it as results.
             try:
                 self.results = eval(self.container.app.in_queue.get(True, 4))
+            # Otherwise warn client connection is loss.
             except queue.Empty:
                 App.popup("warning", "No response from server, are you connected to the internet?")
+                return
+            # q is overall row counter.
             q = 1
+            # Loop through friends and draw with <view profile> button.
             for i, friend in enumerate(self.results[0]):
                 self.results_stuff.append(SearchFrame(self, i + 1, friend[1], friend[0], 2))
                 self.results_stuff[-1].draw()
                 q += 1
+            # Loop through peopple that have friend requests sent.
             for i, pending in enumerate(self.results[1]):
                 self.results_stuff.append(SearchFrame(self, q + i + 1, pending[1], pending[0], 1))
                 self.results_stuff[-1].draw()
                 q += 1
+            # Loop through non-friends and draw with <add friend> button.
             for i, user in enumerate(self.results[2]):
                 self.results_stuff.append(SearchFrame(self, q + i + 1, user[1], user[0], 0))
                 self.results_stuff[-1].draw()
-            print([x.username for x in self.results_stuff])
 
     def clear(self):
+        """Empty out all search results."""
         for p in self.results_stuff:
             p.destroy()
         self.results_stuff = []
 
-
+# <name> <button>
 class SearchFrame:
     def __init__(self, container, row, username, id, friend):
+        # Initiliase place where frame is created.
         self.container = container
-
+        # and other variables.
         self.row = row
         self.username = username
         self.id = id
-        print(friend)
+        # friend = 0, not friends.
+        # friend = 1, requested but not accepted.
+        # friend= 2, users are friends.
         if friend == 1:
             cmd = None
             text = "Request pending"
@@ -270,11 +285,11 @@ class SearchFrame:
         else:
             cmd = self.add_friend
             text = "Add friend"
-
+        # Configure how frame looks.
         self.frame = tk.Frame(self.container.top, bg="white")
         self.frame.columnconfigure(0, minsize=100)
         self.frame.columnconfigure(1, minsize=100)
-
+        # Configure name label and button.
         self.user_lab = tk.Label(self.frame, text=self.username, fg="royalblue2", bg="white",
                                  font=("trebuchet ms", 12, "bold"))
 
@@ -283,10 +298,13 @@ class SearchFrame:
                                         command=cmd)
 
     def add_friend(self):
+        """Send friend request to database."""
         self.container.container.app.out_queue.put("friends|{}|{}".format(self.container.container.app.id, self.id))
+        # After clicking the button, prevent user from sending request again.
         self.profile_button.configure(command=lambda: App.popup("info", "Already sent a request!"))
 
     def draw(self):
+        """Add widgets to frame."""
         self.frame.grid(column=0, row=self.row, pady=(5, 5), sticky="NSWE", columnspan=2)
 
         self.user_lab.grid(column=0, row=0, sticky="W", padx=5)
@@ -294,6 +312,7 @@ class SearchFrame:
         self.profile_button.grid(column=4, row=0, sticky="E", padx=(40, 0))
 
     def destroy(self):
+        """Delete this frame from memory."""
         self.frame.destroy()
 
         self.user_lab.destroy()
@@ -301,16 +320,18 @@ class SearchFrame:
 
         del self
 
-
+# Requests                     | Friends
+# <non-friend> <accept button> | <friend> <remove friend button>
 class FriendDialog:
     def __init__(self, container):
         self.container = container
-
+        # Create popup window and configure display.
         self.top = tk.Toplevel(self.container.app.root, bg="gray90")
         self.top.title("Add New Friends!")
         self.top.columnconfigure(0, minsize=240)
         self.top.columnconfigure(1, minsize=240)
-
+        # _l = left, _r = right
+        # Configure title labels and frames.
         self.title_l = tk.Label(self.top, text="Requests", fg="white", bg="royalblue2",
                                 font=("trebuchet ms", 14, "bold"))
         self.title_r = tk.Label(self.top, text="Friends", fg="white", bg="royalblue2",
@@ -318,7 +339,7 @@ class FriendDialog:
 
         self.left = tk.Frame(self.top, bg="gray90")
         self.right = tk.Frame(self.top, bg="gray90")
-
+        # Initiliase storage lists.
         self.pending = []
         self.current = []
 
@@ -326,6 +347,7 @@ class FriendDialog:
         self.draw()
 
     def draw(self):
+        """Add widgets to this popup window."""
         self.title_l.grid(column=0, row=0, sticky="NEWS")
         self.title_r.grid(column=1, row=0, sticky="NEWS")
 
@@ -333,9 +355,10 @@ class FriendDialog:
         self.right.grid(column=1, row=1, padx=10)
 
     def get_stuff(self):
+        """Retrieve friend requests and current friends from database."""
         self.container.app.out_queue.put("pending|{}".format(self.container.app.id))
         self.clear()
-        print(self.pending, self.current)
+        # Empty lists.
         pending, current = [], []
         try:
             pending = eval(self.container.app.in_queue.get(True, 4))
@@ -543,7 +566,6 @@ class StatisticsDialog:
 # How much did you do <textentry>
 # How was it <textarea>
 # <Submit>
-
 class AccountDialog:
     def __init__(self, container):
         self.container = container
