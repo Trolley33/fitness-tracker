@@ -776,7 +776,9 @@ class Login:
     def draw(self):
         """Add this class's widgets to main window."""
         self.app.root.configure(bg="royalblue2")
-
+        
+        self.app.root.bind("<Return>", self.press_enter)
+        
         self.title.grid(column=0, row=0, sticky="NEWS")
 
         self.main_frame.grid(column=0, row=1, padx=20, pady=(4, 8))
@@ -785,6 +787,7 @@ class Login:
         # in frame
         self.user_lab.grid(column=0, row=0, padx=(0, 4))
         self.user_entry.grid(column=1, row=0)
+        self.user_entry.focus_set()
         self.pass_lab.grid(column=0, row=1, padx=(0, 4))
         self.pass_entry.grid(column=1, row=1)
 
@@ -794,7 +797,9 @@ class Login:
     def undraw(self):
         """Remove this class's widgets from main window."""
         self.title.grid_forget()
-
+        
+        self.app.root.unbind("<Return>")
+        
         self.main_frame.grid_forget()
 
         self.mini_frame.grid_forget()
@@ -809,6 +814,9 @@ class Login:
         # Also remove data from entry boxes.
         self.user_entry.delete(0, 'end')
         self.pass_entry.delete(0, 'end')
+        
+    def press_enter(self, event=None):
+        self.login()
 
     def signup(self):
         """Signup new account routine."""
@@ -830,6 +838,9 @@ class Login:
             # Otherwise the account already exists.
             elif success == "false":
                 App.popup("info", "An account with that username already exists.")
+                self.user_entry.delete(0, 'end')
+                self.pass_entry.delete(0, 'end')
+                self.user_entry.focus_set()
 
     def login(self):
         """Login existing account routine."""
@@ -863,6 +874,7 @@ class Login:
                     App.popup("info", "Invalid login credentials.")
                     self.user_entry.delete(0, 'end')
                     self.pass_entry.delete(0, 'end')
+                    self.user_entry.focus_set()
 
             except queue.Empty as e:
                 # If no data is retrieved from server.
