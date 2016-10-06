@@ -586,16 +586,17 @@ class StatisticsDialog:
 # <Submit>
 class AccountDialog:
     def __init__(self, container):
+        # Initiliase class variable.
         self.container = container
-
+        # Create popup window.
         self.top = tk.Toplevel(self.container.app.root)
         self.top.title("Tell us about yourself.")
         self.top.configure(bg="royalblue2")
         self.top.resizable(0,0)
-
+        # Initiliase labels, entries, and button.
         self.title_label = tk.Label(self.top, text="Update Your Information", font=("trebuchet ms", 14, "bold"),
                                 fg="white", bg="royalblue2")
-
+        # h = height, w = weight, a = age.
         self.h_lab = tk.Label(self.top, text="Height (cm):", font=("trebuchet ms", 12, "bold"),
                                 fg="white", bg="royalblue2")
         self.w_lab = tk.Label(self.top, text="Weight (kg):", font=("trebuchet ms", 12, "bold"),
@@ -614,6 +615,7 @@ class AccountDialog:
 
 
     def draw(self):
+        """Add basic widgets to this window."""
         self.title_label.grid(column=0, row=0, columnspan=3, sticky="NEWS", padx=(0,5))
 
         self.h_lab.grid(column=0, row=1, padx=5, sticky="E")
@@ -627,13 +629,17 @@ class AccountDialog:
         self.submit_but.grid(column=1, row=4, sticky="E", padx=0, pady=(5, 5))
 
     def validate(self):
+        """Validate inputs and convert to correct floats."""
         height = self.isfloat(self.h.get())
         weight = self.isfloat(self.w.get())
         age = self.isfloat(self.a.get())
-
+        # Check all inputs have been entered.
         if (height and weight and age):
-            if 0 < height < 300 and 0< weight < 250 and 0 < age < 150:
+            # If height, weight, and age are within reasonable ranges.
+            if 0 < height < 300 and 0 < weight < 250 and 0 < age < 150:
+                # Update data in database.
                 self.container.app.out_queue.put("info|{}|{}|{}|{}".format(self.container.app.id, height, weight, age))
+                # Destroy this window.
                 self.top.destroy()
                 del self
             else:
@@ -642,6 +648,7 @@ class AccountDialog:
             App.popup("warning", "One or more entries have been left blank, all are required to update info.")
 
     def isfloat(self, x):
+        """If string is float, return value. Otherwise return false."""
         try:
             x = float(x)
             return x
@@ -649,24 +656,27 @@ class AccountDialog:
             return False
             
     def get_stuff(self):
+        """Retrieve personal data about user from database."""
         self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
         info = eval(self.container.app.in_queue.get())
+        # Insert data in database to input boxes.
         self.h.insert('end', info[0][0])
         self.w.insert('end', info[0][1])
         self.a.insert('end', info[0][2])
 
 class App:
     def __init__(self):
+        # Initiliase root tk window.
         self.root = tk.Tk()
         self.root.title("FitBook")
         self.root.configure(bg="royalblue2")
         self.root.resizable(width=False, height=False)
-
+        # Initiliase variables for later use.
         self.id = -1
         self.username = ""
 
         self.s = socket.socket()
-
+        # Attempt to connect to supplied server, otherwise raise error and close app.
         try:
             self.s.connect(SERVER)
         except Exception as e:
@@ -675,35 +685,49 @@ class App:
             del self
             exit()
 
-        self.out_queue = queue.Queue()
-        self.in_queue = queue.Queue()
-
+        # Queues are used for proper communication between threads, and tkinter.
+        # This prevents overwrites and errors that can come from the other method.
+        self.out_queue = queue.Queue()  # holds data to be sent to server.
+        self.in_queue = queue.Queue()  # holds data received from server.
+        # Create gui objects from classes.
         self.login_screen = Login(self)
-        self.main = Main(self)
-
+        self.main = Main(self) 
+        # Draw login window as first window.
         self.login_screen.draw()
-
+        # Start networking thread.
         t = threading.Thread(target=self.handler, args=(self.s, SERVER))
-        t.setDaemon(True)
+        t.setDaemon(True)  # closes thread when main app is closed.
         t.start()
 
         self.root.mainloop()
 
     def handler(self, s, a):
+        """Network handling method. Takes socket and server ip as arguments."""
+        # Loop below code unless stopped.
         while 1:
+            # Attempt to:
             try:
+                # Check if any data has been sent.
                 ready = select.select([s], [], [], 0.25)
+                # If some data does exist.
                 if ready[0]:
+                    # Retrieve the data and decode to regular text.
                     reply = s.recv(1024)
                     reply = reply.decode()
                     if not reply:
                         break
+                    # Log data in console.
                     print('* received', reply)
+                    # Place received data in in_queue.
                     self.in_queue.put(reply)
+                # If data needs to be sent out.
                 if not self.out_queue.empty():
+                    # Encode data and send to server.
                     msg = self.out_queue.get()
                     s.send(msg.encode())
+                    # Log data in console.
                     print("* sent:", msg)
+            # If error occurs, print and properly close connection.
             except Exception as e:
                 print(e)
                 break
@@ -712,6 +736,7 @@ class App:
 
     @staticmethod
     def popup(box, msg):
+        """Create popup message window. Takes box type, and message to display as arguments."""
         if box == "info":
             messagebox.showinfo("Information", msg)
         if box == "warning":
@@ -721,10 +746,13 @@ class App:
 
 
 class Login:
+    # Set static admin variable.
     admin = False
 
     def __init__(self, app):
-        self.app = app
+        # Initiliase class variable.
+        self.app = app  # store main app object locally.
+        # Initiliase labels and frames.
         self.title = tk.Label(text="FitBook", font=("trebuchet ms", 20, "bold"), bg="royalblue3",
                               fg="white")
 
@@ -746,6 +774,7 @@ class Login:
                                       command=self.login, font=("trebuchet ms", 12))
 
     def draw(self):
+        """Add this class's widgets to main window."""
         self.app.root.configure(bg="royalblue2")
 
         self.title.grid(column=0, row=0, sticky="NEWS")
@@ -763,6 +792,7 @@ class Login:
         self.login_button.grid(column=1, row=2, sticky="W", padx=5, pady=(5, 0))
 
     def undraw(self):
+        """Remove this class's widgets from main window."""
         self.title.grid_forget()
 
         self.main_frame.grid_forget()
@@ -776,66 +806,91 @@ class Login:
 
         self.signup_button.grid_forget()
         self.login_button.grid_forget()
-
+        # Also remove data from entry boxes.
         self.user_entry.delete(0, 'end')
         self.pass_entry.delete(0, 'end')
 
     def signup(self):
+        """Signup new account routine."""
+        # Retrieve name and password from entry.
         name = self.user_entry.get()
         passw = self.pass_entry.get()
+        # If both are set.
         if name and passw:
+            # Create salt for user.
             salt = Login.salt_generator()
+            # Generate sha256 hash using password and salt, return hex version.
             passw_hash = hashlib.sha256(str(passw + salt).encode()).hexdigest()
+            # Send request to server asking to create new account.
             self.app.out_queue.put("signup|{}|{}|{}".format(name, passw_hash, salt))
             success = self.app.in_queue.get(True, 10)
+            # If server gives the ok.
             if success == "true":
                 App.popup("info", "Successfully signed up.")
+            # Otherwise the account already exists.
             elif success == "false":
                 App.popup("info", "An account with that username already exists.")
 
     def login(self):
+        """Login existing account routine."""
+        # Retrieve name and password from entry.
         name = self.user_entry.get()
         passw = self.pass_entry.get()
+        # If both are set.
         if name and passw:
+            # Attempt to:
             try:
+                # Request the account's salt from the sever.
                 self.app.out_queue.put("request|salt|{}".format(name))
                 salt = self.app.in_queue.get(True, 5)
+                # Generate sha256 hash using password entered and retrieved salt, return hex version.
                 hash = hashlib.sha256(str(passw + salt).encode()).hexdigest()
+                # Send request to server asking to login with given details.
                 self.app.out_queue.put("login|{}|{}".format(name, hash))
                 valid = self.app.in_queue.get(True, 5).split("|")
+                # If account is valid
                 if valid[0] == "true":
+                    # Set app's user id and admin variable accordingly.
                     self.app.id = int(valid[1])
                     Login.admin = bool(int(valid[2]))
                     self.app.username = name
-                    # do stuff
+                    # Change from curretn window to main app window.
                     self.undraw()
                     self.app.main.draw()
+                # If account is not valid.
                 elif valid[0] == "false":
+                    # Warn user of their mistake and clear entry boxes.
                     App.popup("info", "Invalid login credentials.")
                     self.user_entry.delete(0, 'end')
                     self.pass_entry.delete(0, 'end')
 
             except queue.Empty as e:
+                # If no data is retrieved from server.
                 App.popup("warning", "Could not establish a connection with server.")
 
             except Exception as e:
+                # If any other errors occur.
                 print(e)
 
     @staticmethod
     def salt_generator(size=10):
+        """Generate random ascii string."""
+        # All letters and numbers.
         chars = string.ascii_uppercase + string.digits
+        # Randomly join them.
         text = ''.join(random.choice(chars) for _ in range(size))
         return text
 
 
 class Main:
     def __init__(self, app):
+        # Initiliase class variable.
         self.app = app
-
+        # Set defaults variables for later use.
         self.page = 1
         self.current_profile = 0
         self.notifs = 0
-
+        # Initiliase labels, frames, and buttons.
         self.top_bar = tk.Frame(bg="royalblue3")
 
         self.user_but = tk.Button(self.top_bar, text="Oi!", bg="royalblue2", fg="white", width=6,
@@ -872,46 +927,66 @@ class Main:
         self.posts = []
 
     def post(self):
+        """Instantiate post creation window."""
         PostDialog(self)
 
     def search(self):
+        """Instantiate search window."""
         SearchDialog(self)
 
     def friends(self):
+        """Instantiate friends window."""
         FriendDialog(self)
 
     def stats(self):
+        """Instantiate statistics window."""
         StatisticsDialog(self)
 
     def acc(self):
+        """Instantiate account information window."""
         AccountDialog(self)
 
     def delete_account(self):
+        """Remove currently selected account from server."""
+        # Ask for user confirmation.
         yn = messagebox.askyesno("Confirmation", "Deleting this account will remove it permanently from the server.\n"
                                                  "Are you sure?")
+        # If user is sure.
         if yn:
+            # Tell server to delete account.
             self.app.out_queue.put("deleteacc|{}".format(self.current_profile))
+            # If the deleted account is the user's; logout.
             if self.current_profile == self.app.id:
                 self.logout()
+            # Otherwise redirect to main feed.
             else:
                 self.load()
 
     def back(self):
+        """Change the next more recent page."""
         if self.page > 1:
             self.page -= 1
             self.load(self.current_profile)
 
     def next(self):
+        """Change to next less recent page."""
+        # If the current page is not blank.
         if not isinstance(self.posts[0], tk.Label):
             self.page += 1
             self.load(self.current_profile)
 
     def submit(self, activity, meta, text):
+        """Create new activity post."""
+        # Send server data.
         self.app.out_queue.put("new|{}|{}|{}|{}".format(self.app.id, activity, meta, text))
+        # After 1 second refresh the feed.
         self.app.root.after(1000, self.load)
 
     def load(self, id=0):
+        """Load the given ID's profile."""
+        # Empty out any remaining posts.
         self.clear_posts()
+        # Initiliase for later use.
         options = {
             "run": "Ran {} kilometres.",
             "swim": "Swam {} metres.",
@@ -919,66 +994,92 @@ class Main:
             "cycle": "Cycled {} kilometres.",
             "push": "Did {} push-ups."
         }
-        # load feed
+        # If no id is supplied, load the activity feed (all friends and self).
         if id == 0:
+            # Ensure delete account button is not drawn. 
             self.delete_but.grid_forget()
+            # Move refresh button to given position (changes when delete button exists).
             self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(156, 5))
+            # If the feed has just been loaded (current profile will still be representing the profile just viewed.)
             if self.current_profile != 0:
+                # Set page to 1st.
                 self.page = 1
+            # Load data from server.
             self.app.out_queue.put("feed|{}|{}".format(self.app.id, self.page * 5))
+            # Set profile to 0 to match what is being dispayed.
             self.current_profile = 0
             feed = self.app.in_queue.get(True, 2)
-            feed = eval(feed)
+            feed = eval(feed)  # interpret string as actual code (turn into list.)
+            # Loop through the feed with i for row, and p for data.
             for i, p in enumerate(feed):
-                u = p[0]
-                a = p[1]
-                m = p[2]
-                d = p[3]
-                t = p[4]
-                id = p[5]
-                f_id = p[6]
+                u = p[0]  # username
+                a = p[1]  # activity
+                m = p[2]  # amount done (meta data)
+                d = p[3]  # date
+                t = p[4]  # body of text
+                id = p[5] # user id
+                f_id = p[6] # feed id
+                # If activity is in 'options', format the given metadata into the string.
                 if a in options.keys():
                     a = options[a].format(m)
+                # Otherwise leave blank.
                 else:
                     a = ""
+                # Create Post object using above data.
                 self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=id, feed_id=f_id))
+                # Draw just added post to row i.
                 self.posts[-1].draw(i)
+            # Change top-left button to load own profile.
             self.user_but.configure(text="Profile", command=lambda: self.load(self.app.id))
-        # load other page
+        # Otherwise, load supplied profile id.
         else:
-            # query server for profile
+            # If the current_profile is not the one supplied, set page to 1st.
             if self.current_profile != id:
                 self.page = 1
-            flag = 0
+            flag = 0  # admin flag
             if Login.admin:
                 flag = 1
+            # Request profile from server
             self.app.out_queue.put("profile|{}|{}|{}|{}".format(id, self.app.id, self.page * 5, flag))
+            # Set profile to one supplied to match what is being displayed. 
             self.current_profile = id
+            # If the account is an admin, or the account is owned by the user.
             if Login.admin or self.current_profile == self.app.id:
+                # Allow them to delete the page.
                 self.delete_but.grid(column=98, row=0, sticky="NS", padx=(5, 5))
+                # Move refresh button to given postion (changes when delete button exists).
                 self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(5, 5))
             prof = self.app.in_queue.get(True, 2)
-            prof = eval(prof)
+            prof = eval(prof)  # interpret string as actual code (turn into list.)
+            # Loop through the profile with i for row, and p for data.
             for i, p in enumerate(prof):
-                u = p[0]
-                a = p[1]
-                m = p[2]
-                d = p[3]
-                t = p[4]
-                f_id = p[5]
+                u = p[0]  # username
+                a = p[1]  # activity
+                m = p[2]  # amount done (meta data)
+                d = p[3]  # date
+                t = p[4]  # body of text
+                f_id = p[5]  # feed id
+                 # If activity is in 'options', format the given metadata into the string.
                 if a in options.keys():
                     a = options[a].format(m)
+                # Otherwise leave blank.
                 else:
                     a = ""
+                 # Create Post object using above data.
                 self.posts.append(Post(container=self, username=u, activity=a, date=d, text=t, user_id=-id, feed_id=f_id))
+                # Draw just added post to row i.
                 self.posts[-1].draw(i)
+            # Change top-left button to load own profile.
             self.user_but.configure(text="Feed", command=self.load)
+        # If no posts have been drawn
         if len(self.posts) == 0:
+            # Add a friendly message instead of displaying a blank page.
             self.posts.append(tk.Label(self.page_frame, text="No posts here!", fg="gray65", bg="gray95",
                                        font=("trebuchet ms", 12, "bold"), bd=2, relief="groove", padx=40, pady=20))
             self.posts[0].grid(row=1, pady=10)
 
     def logout(self):
+        """Clear user data and go back to login page."""
         self.app.id = -1
         self.app.username = ""
 
@@ -986,6 +1087,7 @@ class Main:
         self.app.login_screen.draw()
 
     def draw(self):
+        """Add this class's widgets to the main window."""
         self.app.root.configure(bg="gray90")
         self.top_bar.grid(column=0, row=0, sticky="NEWS", columnspan=2)
 
@@ -1011,6 +1113,7 @@ class Main:
         self.load()
 
     def undraw(self):
+        """Remove this class's widgets from the main window."""
         self.top_bar.grid_forget()
         self.clear_posts()
         self.page_frame.grid_forget()
@@ -1021,19 +1124,27 @@ class Main:
         self.app.root.title("FitBook")
 
     def update_notifications(self):
+        """Check how many friend requests a user has."""
         self.app.out_queue.put("pending|{}".format(self.app.id))
+        # Number of requests.
         n = len(eval(self.app.in_queue.get(True, 4)))
+        # If there are some requests, display them next 'friends' text.
         if n:
             self.friends_but.configure(text="Friends ({})".format(n))
         else:
             self.friends_but.configure(text="Friends")
 
     def clear_posts(self):
+        """Remove all current posts from memory."""
+        # Loop through all drawn posts.
         for post in self.posts:
+            # If the post is a Post object, use delete method.
             if isinstance(post, Post):
                 post.delete()
+            # Otherwise the post is a regular label, use the destroy method.
             else:
                 post.destroy()
+        # Empty posts list.
         self.posts = []
 
 

@@ -128,6 +128,7 @@ def handler(c, a):
                         msg = str(result)
                     else:
                         msg = "[]"
+                # request|what|name
                 if split[0] == "request" and len(split) == 3:
                     what = split[1]
                     if what == "salt":
@@ -142,6 +143,7 @@ def handler(c, a):
                             msg = salt
                         else:
                             msg = "no user"
+                # login|username|password hash
                 if split[0] == "login" and len(split) == 3:
                     name = split[1]
                     sub_passw = split[2]
@@ -158,6 +160,7 @@ def handler(c, a):
                             msg = "false"
                     else:
                         msg = "false"
+                # signup|username|password hash|salt
                 if split[0] == "signup" and len(split) == 4:
                     name = split[1]
                     hash = split[2]
@@ -186,7 +189,7 @@ def handler(c, a):
                         db_in.put(query)
                         db_out.get()
                         msg = "true"
-
+                # new|user id|activity|metadata|text
                 if split[0] == "new" and len(split) == 5:
                     id = split[1]
                     act = split[2]
@@ -199,6 +202,7 @@ def handler(c, a):
                     db_in.put(query)
                     db_out.get(True, 10)
                     print("added")
+                # search|user id|search term
                 if split[0] == "search" and len(split) == 3:
                     id = split[1]
                     name = split[2]
@@ -227,18 +231,18 @@ def handler(c, a):
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     pending = db_out.get(True, 10)
+                    # If user has friends, or pending requests, work out who isn't friends by removing these people.
                     if len(friends) > 0:
                         not_friends = [x for x in not_friends if x not in friends]
                     if len(pending) > 0:
                         not_friends = [x for x in not_friends if x not in pending]
 
-                    print(friends, pending, not_friends)
-
                     if friends or pending or not_friends:
+                        # Use sets to prevent same person appearing in 1 list.
                         msg = str([set(friends), set(pending), set(not_friends)][:15])
                     else:
                         msg = "[[], []]"
-
+                # friends|user id|friend id
                 if split[0] == "friends" and len(split) == 3:
                     id1 = split[1]
                     id2 = split[2]
@@ -246,7 +250,7 @@ def handler(c, a):
                     query = "INSERT INTO friends VALUES ('{}', '{}', 'waiting', datetime('now'))".format(id1, id2)
                     db_in.put(query)
                     db_out.get()
-
+                # pending|user id
                 if split[0] == "pending" and len(split) == 2:
                     id = split[1]
                     query = """SELECT DISTINCT username, login.id  FROM login
@@ -261,7 +265,7 @@ def handler(c, a):
                         msg = str(friends)
                     else:
                         msg = "[]"
-
+                # current|user id
                 if split[0] == "current" and len(split) == 2:
                     id = split[1]
                     query = """SELECT DISTINCT username, login.id FROM login
@@ -277,7 +281,7 @@ def handler(c, a):
                         msg = str(friends)
                     else:
                         msg = "[]"
-
+                # accept|user id|friend id
                 if split[0] == "accept" and len(split) == 3:
                     id1 = split[1]
                     id2 = split[2]
@@ -289,7 +293,7 @@ def handler(c, a):
 
                     db_in.put(query)
                     db_out.get()
-
+                # remove|user id|friend id
                 if split[0] == "remove" and len(split) == 3:
                     id1 = split[1]
                     id2 = split[2]
@@ -302,7 +306,7 @@ def handler(c, a):
 
                     db_in.put(query)
                     db_out.get()
-
+                # deletepost|post id
                 if split[0] == "deletepost" and len(split) == 2:
                     feed_id = split[1]
                     query = """DELETE FROM feed
@@ -310,7 +314,7 @@ def handler(c, a):
 
                     db_in.put(query)
                     db_out.get()
-
+                # deleteacc|account id
                 if split[0] == "deleteacc" and len(split) == 2:
                     acc_id = split[1]
                     query = """DELETE FROM login
@@ -325,7 +329,7 @@ def handler(c, a):
                                WHERE id = '{0}' OR friend_id='{0}'""".format(acc_id)
                     db_in.put(query)
                     db_out.get()
-
+                # activities|user id|time span
                 if split[0] == "activities" and len(split) == 3:
                     id = split[1]
                     timespan = int(split[2])
@@ -342,6 +346,7 @@ def handler(c, a):
                         print(result)
                     else:
                         msg = "[]"
+                # info|user id|height|weight|age
                 if split[0] == "info" and len(split) == 5:
                     id = split[1]
                     height = split[2]
@@ -352,6 +357,7 @@ def handler(c, a):
                                WHERE id='{}'""".format(height, weight, age, id)
                     db_in.put(query)
                     db_out.get()
+                # getinfo|user id
                 if split[0] == "getinfo" and len(split) == 2:
                     id = split[1]
                     query = """SELECT height, weight, age FROM info
@@ -373,6 +379,7 @@ def handler(c, a):
     print("closed connection with", a)
 
 while 1:
+    # Start a new thread to handle each connected client.
     print("listening on", *server)
     client, address = s.accept()
     print("... connected from", address)
