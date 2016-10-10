@@ -66,7 +66,7 @@ def handler(c, a):
                 reply = scrub(reply.decode())
                 # Log communication in console.
                 print('* received:', reply)
-                # Decode message into [command, and *arguments]
+                # Decode message into [command, and *arguments].
                 split = reply.split("|")
                 msg = ''
                 # profile|friend_id|user_id|is_admin_flag|period
@@ -75,6 +75,11 @@ def handler(c, a):
                     user_id = split[2]
                     flag = int(split[3])
                     if friend_id != user_id and not flag:
+                        # SELECT all users from friends table
+                        # WHERE (the first id is the user, and the second id is the friend
+                        # OR the first id is the friend, and the second id is the friend)
+                        # AND the friendship is active
+                        # *This checks if the users supplied are friends*
                         query = """SELECT * FROM friends
                                    WHERE ((friends.friend_id = {0} AND friends.id = {1})
                                    OR (friends.friend_id = {1} AND friends.id = {0}))
@@ -90,6 +95,11 @@ def handler(c, a):
                         # If user sends a different time period for posts allow it.
                         if len(split) >= 4:
                             max = int(split[3])
+                        # SELECT username, activity, amount done, date done, body of text, and feed id
+                        # JOIN login and feed able on the login id being same as feed id (same user)
+                        # WHERE login id is the id supplied
+                        # LIMIT rows selected to 5 rows, between max-5 and max
+                        # *This gets post data on only the user requested*
                         query = ("""SELECT login.username, feed.activity, feed.metadata, feed.date, feed.text, feed.feed_id
                                     FROM login
                                     JOIN feed
@@ -112,6 +122,15 @@ def handler(c, a):
                     max = 6
                     if len(split) >= 3:
                         max = int(split[2])
+                    # SELECT username, activity, amount done, date done, body of text, id of user, id of post in feed
+                    # DISTINCT ensures no duplicate rows are returned by accident
+                    # JOIN login and feed able ON the login id being same as feed id (same user)
+                    # JOIN new joined table to friends ON the feed id being either the id of the user, or id of the friend
+                    # WHERE either of the ids in the friend table is the one supplied
+                    # AND the friendship is active
+                    # ORDER results chronologically (by date)
+                    # LIMIT rows selected to 5, max-5 to max
+                    # *This gets post data on anyone the user is friends with*
                     query = """SELECT DISTINCT login.username, feed.activity, feed.metadata, feed.date, feed.text, login.id, feed.feed_id
                                FROM login
                                JOIN feed
@@ -133,7 +152,10 @@ def handler(c, a):
                     what = split[1]
                     if what == "salt":
                         name = split[2]
-                        query = ("""SELECT login.salt, login.pass
+                        # SELECT the salt string from login
+                        # WHERE the username is the one supplied
+                        # *This gets the salt so the client can use it in login attempt*
+                        query = ("""SELECT login.salt
                                     FROM login
                                     WHERE login.username='{}'""".format(name))
                         db_in.put(query)
@@ -147,14 +169,19 @@ def handler(c, a):
                 if split[0] == "login" and len(split) == 3:
                     name = split[1]
                     sub_passw = split[2]
+                    # SELECT password hash, user id, and if user is an admin from login 
+                    # WHERE the username is the one supplied
+                    # *This gets the hash, and data which is needed after a successful login about a user*
                     query = ("""SELECT login.pass, login.id, login.admin
                                 FROM login
                                 WHERE login.username='{}'""".format(name))
                     db_in.put(query)
                     result = db_out.get(True, 10)
                     if result:
+                        # If the password hash is the same as the one in the table
                         pass_hash = result[0][0]
                         if pass_hash == sub_passw:
+                            # Send correct login message
                             msg = "true|{}|{}".format(result[0][1], result[0][2])
                         else:
                             msg = "false"
@@ -165,6 +192,8 @@ def handler(c, a):
                     name = split[1]
                     hash = split[2]
                     salt = split[3]
+                    # SELECT user id from login
+                    # WHERE username is one supplied
                     query = """SELECT login.id
                                FROM login
                                WHERE login.username='{}'""".format(name)
