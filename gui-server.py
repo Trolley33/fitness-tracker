@@ -194,6 +194,7 @@ def handler(c, a):
                     salt = split[3]
                     # SELECT user id from login
                     # WHERE username is one supplied
+                    # *This checks if an account already exists with the username supplied*
                     query = """SELECT login.id
                                FROM login
                                WHERE login.username='{}'""".format(name)
@@ -203,17 +204,27 @@ def handler(c, a):
                         print("already exists")
                         msg = "false"
                     else:
+                        # INSERT new username, password hash, and salt into login table
+                        # *This creates a new entry in the login table for the user*
                         query = """INSERT INTO login (username, pass, salt)
                                    VALUES ('{}', '{}', '{}')""".format(name, hash, salt)
                         db_in.put(query)
                         db_out.get()
+                        # SELECT user id from login
+                        # WHERE username is one supplied
+                        # *This gets the id of the newly inserted user*
                         query = "SELECT id FROM login WHERE username='{}'".format(name)
                         db_in.put(query)
                         result = db_out.get()
+                        # INSERT user id, user id, active, and date into friends table
+                        # *This creates a friendship between the user and themselves, which
+                        # makes the logic for friendships easier later.*
                         query = "INSERT INTO friends VALUES ('{0}', '{0}', 'active'," \
                                 "datetime('now', 'localtime'))".format(result[0][0])
                         db_in.put(query)
                         db_out.get()
+                        # INSERT user id into info table
+                        # *This creates a template row for the user's personal information*
                         query = "INSERT INTO info (id) VALUES ('{}')".format(result[0][0])
                         db_in.put(query)
                         db_out.get()
@@ -222,8 +233,11 @@ def handler(c, a):
                 if split[0] == "new" and len(split) == 5:
                     id = split[1]
                     act = split[2]
+                    # Remove newlines from text as we don't want them in our text.
                     meta = split[3].replace('\n', '')
                     text = split[4].replace('\n', '')
+                    # INSERT user id, activity done, body of text, date done, and amount done into feed table
+                    # *This puts a new post in the feed table*
                     query = """INSERT INTO feed (id, activity, text, date, metadata)
                                VALUES ('{}', '{}', '{}', datetime('now', 'localtime'), '{}')""".format(id, act, text,
                                                                                                        meta)
@@ -235,7 +249,14 @@ def handler(c, a):
                 if split[0] == "search" and len(split) == 3:
                     id = split[1]
                     name = split[2]
-                    # get friends with similar names to term
+                    # SELECT login id and username from login table
+                    # JOIN login table with friends table 
+                    # ON either (login id is same as 1st friend id AND 2nd friend id is one supplied)
+                    # OR (login id is same as 2nd friend id AND 1st friend id is one supplied)
+                    # WHERE username is similar to the search term
+                    # AND the friendship is active
+                    # LIMIT number of rows selected to 15 results
+                    # *This selects users who are friends with the user*
                     query = """SELECT login.id, username FROM login
                                JOIN friends
                                ON (login.id=friends.id AND friends.friend_id='{1}')
@@ -244,14 +265,24 @@ def handler(c, a):
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     friends = db_out.get(True, 10)
-                    # get all with similar names to term
+                    # SELECT login id and username from login table
+                    # WHERE username is similar to the search term
+                    # LIMIT number of rows selected to 15 results
+                    # *This selects all users like the term*
                     query = """SELECT login.id, username FROM login
                                WHERE username LIKE '%{0}%'
                                AND login.id != '{1}'
                                LIMIT 15""".format(name, id)
                     db_in.put(query)
                     not_friends = db_out.get(True, 10)
-                    # get pending with similar names to term
+                    # SELECT login id and username from login table
+                    # JOIN login table with friends table 
+                    # ON either (login id is same as 1st friend id AND 2nd friend id is one supplied)
+                    # OR (login id is same as 2nd friend id AND 1st friend id is one supplied)
+                    # WHERE username is similar to the search term
+                    # AND the friendship is waiting approval
+                    # LIMIT number of rows selected to 15 results
+                    # *This selects users who are pending to be friends with the user*
                     query = """SELECT login.id, username FROM login
                                JOIN friends
                                ON (login.id=friends.id AND friends.friend_id='{1}')
@@ -282,6 +313,13 @@ def handler(c, a):
                 # pending|user id
                 if split[0] == "pending" and len(split) == 2:
                     id = split[1]
+                    # SELECT username and login id from login table
+                    # JOIN friends table
+                    # ON login id being same as 1st friend id
+                    # WHERE friendship is waiting
+                    # AND 2nd friend id is one supplied
+                    # LIMIT amount of results to 15
+                    # *This selects pending friend requests on the given user*
                     query = """SELECT DISTINCT username, login.id  FROM login
                                JOIN friends
                                ON (login.id=friends.id)
@@ -297,6 +335,14 @@ def handler(c, a):
                 # current|user id
                 if split[0] == "current" and len(split) == 2:
                     id = split[1]
+                    # SELECT username and login id from login table
+                    # JOIN friends table
+                    # ON either (login id being same as 1st friend id AND 2nd friend id is same as supplied id)
+                    # OR (login id being same as 2nd friend id AND 1st friend id is same as supplied id)
+                    # WHERE friendship is active
+                    # AND login id is one supplied
+                    # LIMIT amount of results to 15
+                    # *This selects current friends on the given user*
                     query = """SELECT DISTINCT username, login.id FROM login
                                JOIN friends
                                ON (login.id=friends.id AND friends.friend_id='{0}')
@@ -314,7 +360,11 @@ def handler(c, a):
                 if split[0] == "accept" and len(split) == 3:
                     id1 = split[1]
                     id2 = split[2]
-
+                    # UPDATE the friends table by
+                    # SET-ting the state to active
+                    # WHERE the 1st id is the 1st id supplied
+                    # AND the 2nd id is the 2nd id supplied
+                    # *This accepts a friend request between two users*
                     query = """UPDATE friends
                                SET state='active'
                                WHERE friends.id = '{0}'
@@ -326,7 +376,9 @@ def handler(c, a):
                 if split[0] == "remove" and len(split) == 3:
                     id1 = split[1]
                     id2 = split[2]
-
+                    # DELETE row from friends table
+                    # WHERE the 1st and 2nd id in table match the one's supplied (in any order)
+                    # *This deletes a friendship from the friends table*
                     query = """DELETE FROM friends
                                WHERE (friends.id = '{0}'
                                AND friends.friend_id = '{1}')
@@ -338,6 +390,9 @@ def handler(c, a):
                 # deletepost|post id
                 if split[0] == "deletepost" and len(split) == 2:
                     feed_id = split[1]
+                    # DELETE row from feed
+                    # WHERE feed id is same as one supplied
+                    # *This deletes a post from the feed*
                     query = """DELETE FROM feed
                             WHERE feed_id = '{}'""".format(feed_id)
 
@@ -346,14 +401,23 @@ def handler(c, a):
                 # deleteacc|account id
                 if split[0] == "deleteacc" and len(split) == 2:
                     acc_id = split[1]
+                    # DELETE row from login table
+                    # WHERE id is one supplied
+                    # *This deletes the supplied id from the login table*
                     query = """DELETE FROM login
                                WHERE id = '{}'""".format(acc_id)
                     db_in.put(query)
                     db_out.get()
+                    # DELETE row from feed table
+                    # WHERE id is one supplied
+                    # *This deletes the supplied id from the feed table*
                     query = """DELETE FROM feed
                                WHERE id = '{}'""".format(acc_id)
                     db_in.put(query)
                     db_out.get()
+                    # DELETE row from friends table
+                    # WHERE id is one supplied
+                    # *This deletes the supplied id from the friends table*
                     query = """DELETE FROM friends
                                WHERE id = '{0}' OR friend_id='{0}'""".format(acc_id)
                     db_in.put(query)
