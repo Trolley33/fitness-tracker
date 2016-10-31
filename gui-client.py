@@ -579,10 +579,10 @@ class StatisticsDialog:
             lab.configure(text="")
             lab.grid_forget()
 
-# Post Popup Dialog
-# What did you do: <dropdown>
-# How much did you do <textentry>
-# How was it <textarea>
+# Account Info Popup Dialog
+# Height: <textentry>
+# Weight: <textentry>
+# Age: <textentry>
 # <Submit>
 class AccountDialog:
     def __init__(self, container):
