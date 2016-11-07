@@ -422,6 +422,10 @@ def handler(c, a):
                                WHERE id = '{0}' OR friend_id='{0}'""".format(acc_id)
                     db_in.put(query)
                     db_out.get()
+                    query = """DELETE FROM info
+                               WHERE id = '{}'""".format(acc_id)
+                    db_in.put(query)
+                    db_out.get()
                 # activities|user id|time span
                 if split[0] == "activities" and len(split) == 3:
                     id = split[1]
