@@ -436,6 +436,9 @@ def handler(c, a):
                     date = ""
                     if timespan > 0:
                         date = "date >= datetime('now' , '-{} day', 'localtime') AND".format(timespan)
+                    # SELECT activity done, amount done FROM feed table
+                    # WHERE either the date above is fufilled, or if no date is set all time
+                    # AND feed id = supplied user id AND activity done is not blank.
                     query = """SELECT activity, metadata FROM feed
                             WHERE {}
                             id='{}' AND activity <> '' """.format(date, id)
@@ -452,6 +455,9 @@ def handler(c, a):
                     height = split[2]
                     weight = split[3]
                     age = split[4]
+                    # UPDATE info table
+                    # SET height, weight, and age to given values
+                    # WHERE id = supplied
                     query = """UPDATE info
                                SET height='{}',weight='{}',age='{}'
                                WHERE id='{}'""".format(height, weight, age, id)
@@ -460,6 +466,8 @@ def handler(c, a):
                 # getinfo|user id
                 if split[0] == "getinfo" and len(split) == 2:
                     id = split[1]
+                    # SELECT height weight and age FROM info table
+                    # WHERE id = given id
                     query = """SELECT height, weight, age FROM info
                                WHERE id='{}'""".format(id)
                     db_in.put(query)
