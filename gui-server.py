@@ -422,6 +422,9 @@ def handler(c, a):
                                WHERE id = '{0}' OR friend_id='{0}'""".format(acc_id)
                     db_in.put(query)
                     db_out.get()
+                    # DELETE row from info table
+                    # WHERE id is one supplied
+                    # *This deletes the supplied id from the info table*
                     query = """DELETE FROM info
                                WHERE id = '{}'""".format(acc_id)
                     db_in.put(query)
