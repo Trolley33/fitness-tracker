@@ -475,7 +475,17 @@ def handler(c, a):
                     if result:
                         msg = str(result)
                     else:
-                        msg = "[]"
+                        msg = "[[],[],[]]"
+                if split[0] == "allactivity":
+                    # SELECT all activity information FROM feed table
+                    # WHERE activity is not blank
+                    query = """SELECT activity, metadata, date, text FROM feed
+                               WHERE activity != ''"""
+                    db_in.put(query)
+                    result = db_out.get()
+                    if result:
+                        msg = str(result)
+
                 if msg:
                     print("* sending:", msg)
                     c.send(msg.encode())
