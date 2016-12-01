@@ -17,7 +17,7 @@ if socket.gethostname() == "Trolley33":
     SERVER = ("Trolley33", 54321)
 # otherwise connect to supplied address
 else:
-    SERVER = ("ICT-F16-020", 54321)
+    SERVER = ("ICT-F16-022", 54321)
 
 
 # Post container
@@ -478,7 +478,7 @@ class StatisticsDialog:
             "push": "Did {} push-ups."
         }
         # Create popup window.
-        self.top = tk.Toplevel(self.container.app.root, bg="gray90")
+        self.top = tk.Toplevel(self.container.app.root)
         self.top.title("Statistics")
         self.top.configure(bg="royalblue2")
         # Configure drop-down box settings.
@@ -578,6 +578,87 @@ class StatisticsDialog:
         for lab in self.activity_labels:
             lab.configure(text="")
             lab.grid_forget()
+
+
+
+class AdminStats:
+    def __init__(self, container):
+        # Initiliase class variable.
+        self.container = container
+        self.top = tk.Toplevel(self.container.app.root)
+        self.top.title("View stats.")
+        self.top.configure(bg="royalblue2")
+
+        self.options = {
+            "run": ["Running: ", "{} kilometres."],
+            "swim": ["Swimming: ", "{} metres."],
+            "lift": ["Lifting: ", "{} kilograms."],
+            "cycle": ["Cycling: ", "{} kilometres."],
+            "push": ["Push-ups: ", "{} done."]
+        }
+
+        # Initiliase labels and stuff.
+        # Activity popularity area.
+        self.activity_frame = tk.Frame(self.top, bg="white", bd=2, relief="groove", padx=4)
+        self.a_title = tk.Label(self.activity_frame, text="Activity Popularity", fg="royalblue2", bg="white", 
+                                font=("trebuchet ms", 18, "bold"))
+        # Drop down stuff.
+        self.a_selected_opt = tk.StringVar(self.top)
+        self.a_selected_opt.set("Order by number of posts")
+        self.a_dropdown = OrderedDict([["Order by number of posts", "p"],
+                                     ["Order by amount done", "a"]])
+        self.a_menu = tk.OptionMenu(self.activity_frame, self.a_selected_opt, *self.a_dropdown.keys())
+        self.a_menu.configure(bd=0, bg="white", fg="royalblue2", width=22, relief="flat",
+                                 font=("trebuchet ms", 12, "bold"), activeforeground="royalblue2",
+                                 activebackground="white")
+        self.a_menu["menu"].config(bd=0, bg="white", fg="royalblue2",
+                                      activeforeground="royalblue2", relief="flat",
+                                      font=("trebuchet ms", 12, "bold"))
+        self.a_selected_opt.trace('w', self.activities)
+        # End of dropdown.
+        self.a_acts_labs = []
+
+        self.draw()
+
+    def draw(self):
+        self.activity_frame.grid(row=0, column=0)
+        self.a_title.grid(row=0, column=0)
+        self.a_menu.grid(row=0, column=1)
+        self.activities()
+
+    def activities(self, *args):
+        self.clear_activities()
+        flag = self.a_dropdown[self.a_selected_opt.get()]
+        self.container.app.out_queue.put("allactivity")
+        result = eval(self.container.app.in_queue.get())
+        acts = {}
+        for activity, amount, date, text in result:
+            if flag == 'p':
+                if activity in acts.keys():
+                    acts[activity] += 1
+                else:
+                    acts[activity] = 1
+            if flag == 'a':
+                if activity in acts.keys():
+                    acts[activity] += int(amount)
+                else:
+                    acts[activity] = int(amount)
+
+        for i, (name, number) in enumerate(list(sorted(acts.items(), key=operator.itemgetter(1), reverse=True))):
+            if flag == 'p':
+                x = self.options[name][0]+str(number)
+            elif flag == 'a':
+                x = ''.join(self.options[name]).format(number)
+            self.a_acts_labs.append(tk.Label(self.activity_frame, text=x))
+            self.a_acts_labs[-1].grid(row=i+1, column=0)
+
+    def clear_activities(self):
+        for lab in self.a_acts_labs:
+            lab.destroy()
+        self.a_acts_labs = []
+
+
+
 
 # Account Info Popup Dialog
 # Height: <textentry>
@@ -920,6 +1001,8 @@ class Main:
                                    width=10, command=self.stats, font=("trebuchet ms", 12))
         self.acc_but = tk.Button(self.top_bar, text="Account", bg="royalblue2", fg="white", bd=0,
                                    width=10, command=self.acc, font=("trebuchet ms", 12))
+        self.ad_stats_but = tk.Button(self.top_bar, text="Admin Statistics", bg="royalblue2", fg="white", bd=0,
+                                   width=13, command=self.ad_stats, font=("trebuchet ms", 12))
         self.delete_but = tk.Button(self.top_bar, text="Delete Account", bg="firebrick3", fg="white", bd=0,
                                     width=15, command=self.delete_account, font=("trebuchet ms", 12))
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
@@ -957,6 +1040,10 @@ class Main:
     def acc(self):
         """Instantiate account information window."""
         AccountDialog(self)
+
+    def ad_stats(self):
+        """Initiate admin statistics window."""
+        AdminStats(self)
 
     def delete_account(self):
         """Remove currently selected account from server."""
@@ -1110,6 +1197,7 @@ class Main:
         self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 5))
         self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 5))
         self.acc_but.grid(column=6, row=0, sticky="NS", padx=(5, 5))
+        self.ad_stats_but.grid(column=7, row=0, sticky="NS", padx=(5, 5))
         self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(200, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
