@@ -7,6 +7,7 @@ import socket
 import string
 import threading
 import tkinter as tk
+import webbrowser
 from collections import OrderedDict
 from tkinter import messagebox
 
@@ -1013,12 +1014,37 @@ class Main:
 
         self.page_frame = tk.Frame(bg="gray90")
 
-        self.back_but = tk.Button(text="<--", bg="gray90", fg="royalblue2", bd=0, width=4,
+        self.bottom_bar = tk.Frame()
+        self.ad_label = tk.Label(self.bottom_bar, text="")
+        self.back_but = tk.Button(self.bottom_bar, text="<--", bg="gray90", fg="royalblue2", bd=0, width=4,
                                   command=self.back, font=("trebuchet ms", 15))
-        self.next_but = tk.Button(text="-->", bg="gray90", fg="royalblue2", bd=0, width=4,
+        self.next_but = tk.Button(self.bottom_bar, text="-->", bg="gray90", fg="royalblue2", bd=0, width=4,
                                   command=self.next, font=("trebuchet ms", 15))
 
         self.posts = []
+
+    def advertisement(self):
+        options = {
+            "run": ["running", "shoes", "shorts"],
+            "swim": ["swimming", "trunks", "goggles", "bikinis"],
+            "lift": ["lifting", "gloves"],
+            "cycle": ["cycling", "helmets", "shorts", "repair kits"]
+        }
+        self.app.out_queue.put("allactivity")
+        result = eval(self.app.in_queue.get())
+        acts = {}
+        for activity, amount, date, text in result:
+            if activity in acts.keys():
+                acts[activity] += 1
+            else:
+                acts[activity] = 1
+        popular = sorted(acts.items(), key=operator.itemgetter(1), reverse=True)
+        print(popular)
+        if popular[0][0] == "push":
+            popular[0] = popular[1]
+        popular = popular[0]
+        message = "Get {}% off on {} {}.".format(random.randint(1,5)*10, options[popular[0]][0], random.choice(options[popular[0]][0:]))
+        self.ad_label.configure(text=message)
 
     def post(self):
         """Instantiate post creation window."""
@@ -1202,14 +1228,16 @@ class Main:
 
         self.page_frame.grid(column=0, row=1, columnspan=2)
 
-        self.back_but.grid(column=0, row=2, sticky="W")
-        self.next_but.grid(column=1, row=2, sticky="E")
-
+        self.bottom_bar.grid(column=0, row=2, columnspan=2, sticky="NEWS")
+        self.ad_label.grid(column=1, row=0)
+        self.back_but.grid(column=0, row=0, sticky="W")
+        self.next_but.grid(column=2, row=0, sticky="E")
         self.update_notifications()
 
         self.app.root.title("{}'s FitBook".format(self.app.username))
 
         self.load()
+        self.advertisement()
 
     def undraw(self):
         """Remove this class's widgets from the main window."""
