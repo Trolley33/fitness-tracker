@@ -13,8 +13,8 @@ from tkinter import messagebox
 # the master server's IP, set as programmer
 global SERVER
 # if my PC, automatically connect to self
-if socket.gethostname() == "Trolley33":
-    SERVER = ("Trolley33", 54321)
+if socket.gethostname() == "Trolley":
+    SERVER = ("Trolley", 54321)
 # otherwise connect to supplied address
 else:
     SERVER = ("ICT-F16-022", 54321)
@@ -30,7 +30,7 @@ class Post:
     def __init__(self, container, username, activity, date, text, user_id, feed_id):
         # Initialise class variables.
         self.container = container
-        self.page_f = container.page_frame # 
+        self.page_f = container.page_frame #
         self.username = username
         self.activity = activity
         self.date = date
@@ -492,7 +492,7 @@ class StatisticsDialog:
         # Initiliase labels and menu.
         self.username_label = tk.Label(self.top_bar, text="{}'s Statistics Page".format(self.container.app.username),
                                        fg="white", bg="royalblue3", font=("trebuchet ms", 14, "bold"), pady=2)
-        self.calories_label = tk.Label(self.top, text="", fg="white", bg="royalblue2", font=("trebuchet ms", 10, 
+        self.calories_label = tk.Label(self.top, text="", fg="white", bg="royalblue2", font=("trebuchet ms", 10,
                                        "bold"))
         self.time_menu = tk.OptionMenu(self.top_bar, self.selected_opt, *self.dropdown.keys())
 
@@ -504,8 +504,8 @@ class StatisticsDialog:
                                       font=("trebuchet ms", 10, "bold"))
 
         self.selected_opt.trace('w', self.get_stuff)
-        
-  
+
+
         # Create 4 base labels to populate rather than create and remove temporary ones.
         self.activity_labels = []
         for x in range(4):
@@ -541,7 +541,7 @@ class StatisticsDialog:
         top4 = list(sorted(activities.items(), key=operator.itemgetter(1)))[-4:]
         top4.reverse()
         r = 10  # keeps track of bottom of list
-        # Loop through top 4 activities and display them appropriately. 
+        # Loop through top 4 activities and display them appropriately.
         for row, activity in enumerate(top4):
             if activity[0] != "":
                 self.activity_labels[row].configure(text=self.options[activity[0]].format(activity[1]),
@@ -571,7 +571,7 @@ class StatisticsDialog:
                     calories += (0.75 * int(activity[1])) * (info[0]/177.0) * (info[1]/76.0)
         self.calories_label.configure(text="{} calories burned doing these activities.".format(round(calories)))
         self.calories_label.grid(column=0, row=r)
-        
+
 
     def clear(self):
         """Wipe labels in this class but keep them in memory."""
@@ -587,7 +587,7 @@ class AdminStats:
         self.container = container
         self.top = tk.Toplevel(self.container.app.root)
         self.top.title("View stats.")
-        self.top.configure(bg="royalblue2")
+        self.top.configure(bg="gray90")
 
         self.options = {
             "run": ["Running: ", "{} kilometres."],
@@ -600,7 +600,7 @@ class AdminStats:
         # Initiliase labels and stuff.
         # Activity popularity area.
         self.activity_frame = tk.Frame(self.top, bg="white", bd=2, relief="groove", padx=4)
-        self.a_title = tk.Label(self.activity_frame, text="Activity Popularity", fg="royalblue2", bg="white", 
+        self.a_title = tk.Label(self.activity_frame, text="Activity Popularity", fg="black", bg="white",
                                 font=("trebuchet ms", 18, "bold"))
         # Drop down stuff.
         self.a_selected_opt = tk.StringVar(self.top)
@@ -608,11 +608,11 @@ class AdminStats:
         self.a_dropdown = OrderedDict([["Order by number of posts", "p"],
                                      ["Order by amount done", "a"]])
         self.a_menu = tk.OptionMenu(self.activity_frame, self.a_selected_opt, *self.a_dropdown.keys())
-        self.a_menu.configure(bd=0, bg="white", fg="royalblue2", width=22, relief="flat",
-                                 font=("trebuchet ms", 12, "bold"), activeforeground="royalblue2",
+        self.a_menu.configure(bd=0, bg="white", fg="black", width=22, relief="flat",
+                                 font=("trebuchet ms", 12, "bold"), activeforeground="black",
                                  activebackground="white")
-        self.a_menu["menu"].config(bd=0, bg="white", fg="royalblue2",
-                                      activeforeground="royalblue2", relief="flat",
+        self.a_menu["menu"].config(bd=0, bg="white", fg="black",
+                                      activeforeground="black", relief="flat",
                                       font=("trebuchet ms", 12, "bold"))
         self.a_selected_opt.trace('w', self.activities)
         # End of dropdown.
@@ -649,15 +649,14 @@ class AdminStats:
                 x = self.options[name][0]+str(number)
             elif flag == 'a':
                 x = ''.join(self.options[name]).format(number)
-            self.a_acts_labs.append(tk.Label(self.activity_frame, text=x))
-            self.a_acts_labs[-1].grid(row=i+1, column=0)
+            self.a_acts_labs.append(tk.Label(self.activity_frame, text=x, fg="black", bg="white",
+                                             font=("trebuchet ms", 12)))
+            self.a_acts_labs[-1].grid(row=i+1, column=0, columnspan=2)
 
     def clear_activities(self):
         for lab in self.a_acts_labs:
             lab.destroy()
         self.a_acts_labs = []
-
-
 
 
 # Account Info Popup Dialog
@@ -735,7 +734,7 @@ class AccountDialog:
             return x
         except TypeError:
             return False
-            
+
     def get_stuff(self):
         """Retrieve personal data about user from database."""
         self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
@@ -772,7 +771,7 @@ class App:
         self.in_queue = queue.Queue()  # holds data received from server.
         # Create gui objects from classes.
         self.login_screen = Login(self)
-        self.main = Main(self) 
+        self.main = Main(self)
         # Draw login window as first window.
         self.login_screen.draw()
         # Start networking thread.
@@ -857,9 +856,9 @@ class Login:
     def draw(self):
         """Add this class's widgets to main window."""
         self.app.root.configure(bg="royalblue2")
-        
+
         self.app.root.bind("<Return>", self.press_enter)
-        
+
         self.title.grid(column=0, row=0, sticky="NEWS")
 
         self.main_frame.grid(column=0, row=1, padx=20, pady=(4, 8))
@@ -878,9 +877,9 @@ class Login:
     def undraw(self):
         """Remove this class's widgets from main window."""
         self.title.grid_forget()
-        
+
         self.app.root.unbind("<Return>")
-        
+
         self.main_frame.grid_forget()
 
         self.mini_frame.grid_forget()
@@ -895,7 +894,7 @@ class Login:
         # Also remove data from entry boxes.
         self.user_entry.delete(0, 'end')
         self.pass_entry.delete(0, 'end')
-        
+
     def press_enter(self, event=None):
         self.login()
 
@@ -1095,7 +1094,7 @@ class Main:
         }
         # If no id is supplied, load the activity feed (all friends and self).
         if id == 0:
-            # Ensure delete account button is not drawn. 
+            # Ensure delete account button is not drawn.
             self.delete_but.grid_forget()
             # Move refresh button to given position (changes when delete button exists).
             self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(156, 5))
@@ -1140,7 +1139,7 @@ class Main:
                 flag = 1
             # Request profile from server
             self.app.out_queue.put("profile|{}|{}|{}|{}".format(id, self.app.id, self.page * 5, flag))
-            # Set profile to one supplied to match what is being displayed. 
+            # Set profile to one supplied to match what is being displayed.
             self.current_profile = id
             # If the account is an admin, or the account is owned by the user.
             if Login.admin or self.current_profile == self.app.id:
