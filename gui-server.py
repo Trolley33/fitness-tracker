@@ -486,9 +486,21 @@ def handler(c, a):
                     if result:
                         msg = str(result)
 
+                if split[0] == "alluser":
+                    # SELECT admin status FROM login table
+                    query = """SELECT admin FROM login"""
+                    db_in.put(query)
+                    result = db_out.get()
+                    if result:
+                        msg = "[{},{}]".format(str(result), threading.activeCount()-2)
+                    else:
+                        msg = "['','']"
+
                 if msg:
                     print("* sending:", msg)
                     c.send(msg.encode())
+
+
 
         except Exception as e:
             print(e)
