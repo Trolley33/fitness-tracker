@@ -553,7 +553,7 @@ class StatisticsDialog:
         self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
         info = eval(self.container.app.in_queue.get(True, 4))[0]
         # If the info is not set, assume average height and weight.
-        if int(info[0]) == 0:
+        if not info:
             info = (177.0, 76.0)
         calories = 0
         # Loop through top 4 activities and estimate number of calories burned.
@@ -618,14 +618,43 @@ class AdminStats:
         self.a_selected_opt.trace('w', self.activities)
         # End of dropdown.
         self.a_acts_labs = []
-
+        # User info area.
+        self.user_frame = tk.Frame(self.top, bg="white", bd=2, relief="groove", padx=4)
+        self.u_title = tk.Label(self.user_frame, text="User Activity", fg="black", bg="white",
+                                font=("trebuchet ms", 18, "bold"))
+        self.u_total = tk.Label(self.user_frame, text="Total Users:", fg="black", bg="white",
+                                             font=("trebuchet ms", 12))
+        self.u_current = tk.Label(self.user_frame, text="Online Users:", fg="black", bg="white",
+                                             font=("trebuchet ms", 12))
+        self.u_admins = tk.Label(self.user_frame, text="Total Admins:", fg="black", bg="white",
+                                             font=("trebuchet ms", 12))
+        # Time period.
+        self.period_frame = tk.Frame(self.top, bg="gray90")
+        self.period_label = tk.Label(self.period_frame, text="Enter time period in days:", bg="gray90")
+        self.period_entry = tk.Entry(self.period_frame)
+        self.period_button = tk.Button(self.period_frame, text="Refresh")
         self.draw()
 
     def draw(self):
-        self.activity_frame.grid(row=0, column=0)
+        self.activity_frame.grid(row=0, column=0, sticky="NEWS", padx=15, pady=15, columnspan=3)
         self.a_title.grid(row=0, column=0)
         self.a_menu.grid(row=0, column=1)
+
         self.activities()
+
+        self.user_frame.grid(row=0, column=3, sticky="NEWS", padx=15, pady=15)
+        self.u_title.grid(row=0, column=0)
+        self.u_total.grid(row=1, column=0, sticky="W")
+        self.u_current.grid(row=2, column=0, sticky="W")
+        self.u_admins.grid(row=3, column=0, sticky="W")
+
+        self.users()
+
+        self.period_frame.grid(row=1, column=0)
+        self.period_label.grid(row=0, column=0, padx=3)
+        self.period_entry.grid(row=0, column=1, padx=3)
+        self.period_button.grid(row=0, column=2, padx=3)
+
 
     def activities(self, *args):
         self.clear_activities()
@@ -647,17 +676,32 @@ class AdminStats:
 
         for i, (name, number) in enumerate(list(sorted(acts.items(), key=operator.itemgetter(1), reverse=True))):
             if flag == 'p':
-                x = self.options[name][0]+str(number)
+                x = self.options[name][0]+str(number)+" posts."
             elif flag == 'a':
                 x = ''.join(self.options[name]).format(number)
             self.a_acts_labs.append(tk.Label(self.activity_frame, text=x, fg="black", bg="white",
                                              font=("trebuchet ms", 12)))
-            self.a_acts_labs[-1].grid(row=i+1, column=0, columnspan=2)
+            self.a_acts_labs[-1].grid(row=i+1, column=0, columnspan=2, sticky="W")
 
     def clear_activities(self):
         for lab in self.a_acts_labs:
             lab.destroy()
         self.a_acts_labs = []
+
+    def users(self):
+        self.container.app.out_queue.put("alluser")
+        result = eval(self.container.app.in_queue.get())
+        count = len(result[0])
+        admin = 0
+        for user in result[0]:
+            if user[0]:
+                admin += 1
+        current_users = result[1]
+        self.u_total.configure(text="Total Users: {}".format(count))
+        self.u_current.configure(text="Online Users: {}".format(current_users))
+        self.u_admins.configure(text="Total Admins: {}".format(admin))
+        
+
 
 
 # Account Info Popup Dialog
@@ -1014,12 +1058,11 @@ class Main:
 
         self.page_frame = tk.Frame(bg="gray90")
 
-        self.bottom_bar = tk.Frame()
-        self.ad_label = tk.Label(self.bottom_bar, text="")
-        self.back_but = tk.Button(self.bottom_bar, text="<--", bg="gray90", fg="royalblue2", bd=0, width=4,
+        self.ad_label = tk.Label(text="", bg="gray90", font=("trebuchet ms", 15))
+        self.back_but = tk.Button(text="<--", bg="gray90", fg="royalblue2", bd=0, width=4,
                                   command=self.back, font=("trebuchet ms", 15))
-        self.next_but = tk.Button(self.bottom_bar, text="-->", bg="gray90", fg="royalblue2", bd=0, width=4,
-                                  command=self.next, font=("trebuchet ms", 15))
+        self.next_but = tk.Button(text="-->", bg="gray90", fg="royalblue2", bd=0, width=4,
+                                  command=self.next, font=("trebuchet ms", 13))
 
         self.posts = []
 
@@ -1030,21 +1073,22 @@ class Main:
             "lift": ["lifting", "gloves"],
             "cycle": ["cycling", "helmets", "shorts", "repair kits"]
         }
-        self.app.out_queue.put("allactivity")
+        self.app.out_queue.put("activities|{}|28".format(self.app.id))
         result = eval(self.app.in_queue.get())
-        acts = {}
-        for activity, amount, date, text in result:
-            if activity in acts.keys():
-                acts[activity] += 1
-            else:
-                acts[activity] = 1
-        popular = sorted(acts.items(), key=operator.itemgetter(1), reverse=True)
-        print(popular)
-        if popular[0][0] == "push":
-            popular[0] = popular[1]
-        popular = popular[0]
-        message = "Get {}% off on {} {}.".format(random.randint(1,5)*10, options[popular[0]][0], random.choice(options[popular[0]][0:]))
-        self.ad_label.configure(text=message)
+        if result:
+            acts = {}
+            for activity, amount in result:
+                if activity in acts.keys():
+                    acts[activity] += 1
+                else:
+                    acts[activity] = 1
+            popular = sorted(acts.items(), key=operator.itemgetter(1), reverse=True)
+            print(popular)
+            if popular[0][0] == "push":
+                popular[0] = popular[1]
+            popular = popular[0]
+            message = "Get {}% off on {} {}.".format(random.randint(1,5)*10, options[popular[0]][0], random.choice(options[popular[0]][1:]))
+            self.ad_label.configure(text=message)
 
     def post(self):
         """Instantiate post creation window."""
@@ -1110,6 +1154,8 @@ class Main:
         """Load the given ID's profile."""
         # Empty out any remaining posts.
         self.clear_posts()
+        # Change advertisement based on new info.
+        self.advertisement()
         # Initiliase for later use.
         options = {
             "run": "Ran {} kilometres.",
@@ -1213,7 +1259,7 @@ class Main:
     def draw(self):
         """Add this class's widgets to the main window."""
         self.app.root.configure(bg="gray90")
-        self.top_bar.grid(column=0, row=0, sticky="NEWS", columnspan=2)
+        self.top_bar.grid(column=0, row=0, sticky="NEWS", columnspan=3)
 
         self.user_but.grid(column=0, row=0, sticky="NSW", padx=(0, 5))
         self.user_but.configure(text="Profile")
@@ -1222,16 +1268,15 @@ class Main:
         self.friends_but.grid(column=4, row=0, sticky="NS", padx=(5, 5))
         self.stats_but.grid(column=5, row=0, sticky="NS", padx=(5, 5))
         self.acc_but.grid(column=6, row=0, sticky="NS", padx=(5, 5))
-        self.ad_stats_but.grid(column=7, row=0, sticky="NS", padx=(5, 5))
+        if Login.admin:
+            self.ad_stats_but.grid(column=7, row=0, sticky="NS", padx=(5, 5))
         self.refresh_but.grid(column=99, row=0, sticky="NS", padx=(200, 5))
         self.logout_but.grid(column=100, row=0, sticky="NSE", padx=(5, 0))
 
-        self.page_frame.grid(column=0, row=1, columnspan=2)
-
-        self.bottom_bar.grid(column=0, row=2, columnspan=2, sticky="NEWS")
-        self.ad_label.grid(column=1, row=0)
-        self.back_but.grid(column=0, row=0, sticky="W")
-        self.next_but.grid(column=2, row=0, sticky="E")
+        self.page_frame.grid(column=0, row=1, columnspan=3)
+        self.ad_label.grid(column=1, row=2)
+        self.back_but.grid(column=0, row=2, sticky="W")
+        self.next_but.grid(column=2, row=2, sticky="E")
         self.update_notifications()
 
         self.app.root.title("{}'s FitBook".format(self.app.username))
@@ -1242,10 +1287,12 @@ class Main:
     def undraw(self):
         """Remove this class's widgets from the main window."""
         self.top_bar.grid_forget()
+        self.ad_stats_but.grid_forget()
         self.clear_posts()
         self.page_frame.grid_forget()
 
         self.back_but.grid_forget()
+        self.ad_label.grid_forget()
         self.next_but.grid_forget()
 
         self.app.root.title("FitBook")
