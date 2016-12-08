@@ -1073,7 +1073,7 @@ class Main:
         self.acc_but = tk.Button(self.top_bar, text="Account", bg="royalblue2", fg="white", bd=0,
                                    width=10, command=self.acc, font=("trebuchet ms", 12))
         self.ad_stats_but = tk.Button(self.top_bar, text="Admin Panel", bg="royalblue2", fg="white", bd=0,
-                                   width=10, command=self.ad_stats, font=("trebuchet ms", 12))
+                                   width=12, command=self.ad_stats, font=("trebuchet ms", 12))
         self.delete_but = tk.Button(self.top_bar, text="Delete Account", bg="firebrick3", fg="white", bd=0,
                                     width=15, command=self.delete_account, font=("trebuchet ms", 12))
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
