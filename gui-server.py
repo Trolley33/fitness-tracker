@@ -496,6 +496,7 @@ def handler(c, a):
                     db_in.put(query)
                     result = db_out.get()
                     if result:
+                        # Number of connections = threads active - 2 (main thread and DB thread).
                         msg = "[{},{}]".format(str(result), threading.activeCount()-2)
                     else:
                         msg = "['','']"
