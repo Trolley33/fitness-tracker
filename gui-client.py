@@ -632,11 +632,11 @@ class AdminStats:
         self.period_frame = tk.Frame(self.top, bg="gray90")
         self.period_label = tk.Label(self.period_frame, text="Enter time period in days:", bg="gray90")
         self.period_entry = tk.Entry(self.period_frame)
-        self.period_button = tk.Button(self.period_frame, text="Refresh")
+        self.period_button = tk.Button(self.period_frame, text="Refresh", bd=0, bg="gray80", command=self.reload)
         self.draw()
 
     def draw(self):
-        self.activity_frame.grid(row=0, column=0, sticky="NEWS", padx=15, pady=15, columnspan=3)
+        self.activity_frame.grid(row=0, column=0, sticky="NEWS", padx=15, pady=15, columnspan=3, ipady=10)
         self.a_title.grid(row=0, column=0)
         self.a_menu.grid(row=0, column=1)
 
@@ -644,22 +644,22 @@ class AdminStats:
 
         self.user_frame.grid(row=0, column=3, sticky="NEWS", padx=15, pady=15)
         self.u_title.grid(row=0, column=0)
-        self.u_total.grid(row=1, column=0, sticky="W")
-        self.u_current.grid(row=2, column=0, sticky="W")
-        self.u_admins.grid(row=3, column=0, sticky="W")
+        self.u_total.grid(row=1, column=0, sticky="W", padx=2)
+        self.u_current.grid(row=2, column=0, sticky="W", padx=2)
+        self.u_admins.grid(row=3, column=0, sticky="W", padx=2)
 
         self.users()
 
-        self.period_frame.grid(row=1, column=0)
+        self.period_frame.grid(row=1, column=0, pady=(0, 6))
         self.period_label.grid(row=0, column=0, padx=3)
         self.period_entry.grid(row=0, column=1, padx=3)
         self.period_button.grid(row=0, column=2, padx=3)
 
 
-    def activities(self, *args):
+    def activities(self, period=-1, *args):
         self.clear_activities()
         flag = self.a_dropdown[self.a_selected_opt.get()]
-        self.container.app.out_queue.put("allactivity")
+        self.container.app.out_queue.put("allactivity|{}".format(period))
         result = eval(self.container.app.in_queue.get())
         acts = {}
         for activity, amount, date, text in result:
@@ -681,7 +681,7 @@ class AdminStats:
                 x = ''.join(self.options[name]).format(number)
             self.a_acts_labs.append(tk.Label(self.activity_frame, text=x, fg="black", bg="white",
                                              font=("trebuchet ms", 12)))
-            self.a_acts_labs[-1].grid(row=i+1, column=0, columnspan=2, sticky="W")
+            self.a_acts_labs[-1].grid(row=i+1, column=0, columnspan=2, sticky="W", padx=2)
 
     def clear_activities(self):
         for lab in self.a_acts_labs:
@@ -700,6 +700,11 @@ class AdminStats:
         self.u_total.configure(text="Total Users: {}".format(count))
         self.u_current.configure(text="Online Users: {}".format(current_users))
         self.u_admins.configure(text="Total Admins: {}".format(admin))
+
+    def reload(self):
+        period = self.period_entry.get()
+        self.activities(period=period)
+
         
 
 
@@ -784,10 +789,11 @@ class AccountDialog:
         """Retrieve personal data about user from database."""
         self.container.app.out_queue.put("getinfo|{}".format(self.container.app.id))
         info = eval(self.container.app.in_queue.get())
-        # Insert data in database to input boxes.
-        self.h.insert('end', info[0][0])
-        self.w.insert('end', info[0][1])
-        self.a.insert('end', info[0][2])
+        if len(info[0]) == 3:
+            # Insert data in database to input boxes.
+            self.h.insert('end', info[0][0])
+            self.w.insert('end', info[0][1])
+            self.a.insert('end', info[0][2])
 
 class App:
     def __init__(self):
@@ -1045,8 +1051,8 @@ class Main:
                                    width=10, command=self.stats, font=("trebuchet ms", 12))
         self.acc_but = tk.Button(self.top_bar, text="Account", bg="royalblue2", fg="white", bd=0,
                                    width=10, command=self.acc, font=("trebuchet ms", 12))
-        self.ad_stats_but = tk.Button(self.top_bar, text="Admin Statistics", bg="royalblue2", fg="white", bd=0,
-                                   width=13, command=self.ad_stats, font=("trebuchet ms", 12))
+        self.ad_stats_but = tk.Button(self.top_bar, text="Admin Panel", bg="royalblue2", fg="white", bd=0,
+                                   width=12, command=self.ad_stats, font=("trebuchet ms", 12))
         self.delete_but = tk.Button(self.top_bar, text="Delete Account", bg="firebrick3", fg="white", bd=0,
                                     width=15, command=self.delete_account, font=("trebuchet ms", 12))
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
