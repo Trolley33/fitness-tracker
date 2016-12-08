@@ -590,6 +590,7 @@ class AdminStats:
         self.top.title("View stats.")
         self.top.configure(bg="gray90")
 
+        # Convert database terms to readable terms.
         self.options = {
             "run": ["Running: ", "{} kilometres."],
             "swim": ["Swimming: ", "{} metres."],
@@ -636,6 +637,7 @@ class AdminStats:
         self.draw()
 
     def draw(self):
+        """Add basic widgets to this window."""
         self.activity_frame.grid(row=0, column=0, sticky="NEWS", padx=15, pady=15, columnspan=3, ipady=10)
         self.a_title.grid(row=0, column=0)
         self.a_menu.grid(row=0, column=1)
@@ -657,51 +659,70 @@ class AdminStats:
 
 
     def activities(self, period=-1, *args):
+        """Populate activity window with activities."""
+        # Remove all current widgets from window.
         self.clear_activities()
+        # Get the 'posts/amount' choice from dropdown.
         flag = self.a_dropdown[self.a_selected_opt.get()]
+        # Request/receive data from server, based on time period supplied.
         self.container.app.out_queue.put("allactivity|{}".format(period))
         result = eval(self.container.app.in_queue.get())
         acts = {}
+        # Loop through result (all activities ever done).
         for activity, amount, date, text in result:
+            # If dropdown choice is by post.
             if flag == 'p':
+                # Increment by 1 per occurance of activity.
                 if activity in acts.keys():
                     acts[activity] += 1
                 else:
                     acts[activity] = 1
+            # If dropdown choice is by amount.
             if flag == 'a':
+                # Increment by amount done per occurance of activity.
                 if activity in acts.keys():
                     acts[activity] += int(amount)
                 else:
                     acts[activity] = int(amount)
-
+        # Loop through a sorted, highest first, version of the list whilst also preserving current index in list (enumerate).
         for i, (name, number) in enumerate(list(sorted(acts.items(), key=operator.itemgetter(1), reverse=True))):
+            # Modify text after number depending on dropdown choice.
             if flag == 'p':
                 x = self.options[name][0]+str(number)+" posts."
             elif flag == 'a':
                 x = ''.join(self.options[name]).format(number)
+            # Create label using supplied text at given row.
             self.a_acts_labs.append(tk.Label(self.activity_frame, text=x, fg="black", bg="white",
                                              font=("trebuchet ms", 12)))
             self.a_acts_labs[-1].grid(row=i+1, column=0, columnspan=2, sticky="W", padx=2)
 
     def clear_activities(self):
+        """Remove all temporary widgets from activity frame."""
         for lab in self.a_acts_labs:
             lab.destroy()
         self.a_acts_labs = []
 
     def users(self):
+        """Populate user frame with user info."""
+        # Request/receieve data from server.
         self.container.app.out_queue.put("alluser")
         result = eval(self.container.app.in_queue.get())
+        # Total number of users.
         count = len(result[0])
         admin = 0
+        # Loop through result and add up number of admins.
         for user in result[0]:
             if user[0]:
                 admin += 1
+        # Number of users connected to server.
         current_users = result[1]
+        # Display.
         self.u_total.configure(text="Total Users: {}".format(count))
         self.u_current.configure(text="Online Users: {}".format(current_users))
         self.u_admins.configure(text="Total Admins: {}".format(admin))
 
     def reload(self):
+        """Refresh activities within given time period."""
         period = self.period_entry.get()
         self.activities(period=period)
 
@@ -1052,7 +1073,7 @@ class Main:
         self.acc_but = tk.Button(self.top_bar, text="Account", bg="royalblue2", fg="white", bd=0,
                                    width=10, command=self.acc, font=("trebuchet ms", 12))
         self.ad_stats_but = tk.Button(self.top_bar, text="Admin Panel", bg="royalblue2", fg="white", bd=0,
-                                   width=12, command=self.ad_stats, font=("trebuchet ms", 12))
+                                   width=10, command=self.ad_stats, font=("trebuchet ms", 12))
         self.delete_but = tk.Button(self.top_bar, text="Delete Account", bg="firebrick3", fg="white", bd=0,
                                     width=15, command=self.delete_account, font=("trebuchet ms", 12))
         self.refresh_but = tk.Button(self.top_bar, text="↻", bg="royalblue2", fg="white", bd=0,
