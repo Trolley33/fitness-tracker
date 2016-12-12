@@ -723,6 +723,8 @@ class AdminStats:
     def reload(self):
         """Refresh activities within given time period."""
         period = self.period_entry.get()
+        if not period.isdigit():
+            period = -1
         self.activities(period=period)       
 
 
