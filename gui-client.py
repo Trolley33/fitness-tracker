@@ -579,8 +579,7 @@ class StatisticsDialog:
         for lab in self.activity_labels:
             lab.configure(text="")
             lab.grid_forget()
-
-
+            
 
 class AdminStats:
     def __init__(self, container):
@@ -616,7 +615,7 @@ class AdminStats:
         self.a_menu["menu"].config(bd=0, bg="white", fg="black",
                                       activeforeground="black", relief="flat",
                                       font=("trebuchet ms", 12, "bold"))
-        self.a_selected_opt.trace('w', self.activities)
+        self.a_selected_opt.trace('w', lambda x, y, z: self.activities(-1))
         # End of dropdown.
         self.a_acts_labs = []
         # User info area.
@@ -724,10 +723,7 @@ class AdminStats:
     def reload(self):
         """Refresh activities within given time period."""
         period = self.period_entry.get()
-        self.activities(period=period)
-
-        
-
+        self.activities(period=period)       
 
 
 # Account Info Popup Dialog
