@@ -307,7 +307,7 @@ def handler(c, a):
                     id1 = split[1]
                     id2 = split[2]
 
-                    query = "INSERT INTO friends VALUES ('{}', '{}', 'waiting', datetime('now'))".format(id1, id2)
+                    query = "INSERT INTO friends VALUES ('{}', '{}', 'waiting', datetime('now', 'localtime'))".format(id1, id2)
                     db_in.put(query)
                     db_out.get()
                 # pending|user id
@@ -475,10 +475,37 @@ def handler(c, a):
                     if result:
                         msg = str(result)
                     else:
-                        msg = "[]"
+                        msg = "[[],[],[]]"
+                if split[0] == "allactivity" and len(split) == 2:
+                    timespan = int(split[1])
+                    date = ""
+                    if timespan > 0:
+                        date = "date >= datetime('now' , '-{} day', 'localtime') AND".format(timespan)
+                    # SELECT all activity information FROM feed table
+                    # WHERE activity is not blank
+                    query = """SELECT activity, metadata, date, text FROM feed
+                               WHERE {} activity != ''""".format(date)
+                    db_in.put(query)
+                    result = db_out.get()
+                    if result:
+                        msg = str(result)
+
+                if split[0] == "alluser":
+                    # SELECT admin status FROM login table
+                    query = """SELECT admin FROM login"""
+                    db_in.put(query)
+                    result = db_out.get()
+                    if result:
+                        # Number of connections = threads active - 2 (main thread and DB thread).
+                        msg = "[{},{}]".format(str(result), threading.activeCount()-2)
+                    else:
+                        msg = "['','']"
+
                 if msg:
                     print("* sending:", msg)
                     c.send(msg.encode())
+
+
 
         except Exception as e:
             print(e)
